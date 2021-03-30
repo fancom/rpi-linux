@@ -1550,6 +1550,38 @@ static const struct panel_desc chunghwa_claa070wp03xg = {
 	.connector_type = DRM_MODE_CONNECTOR_LVDS,
 };
 
+static const struct display_timing chunghwa_claa070wp03xglvds_timing = {
+	.pixelclock = { 66800000, 66800000, 66800000 },
+	.hactive = { 800, 800, 800 },
+	.hfront_porch = { 16, 16, 16 },
+	.hback_porch = { 32, 32, 32 },
+	.hsync_len = { 16, 16, 16 },
+	.vactive = { 1280, 1280, 1280 },
+	.vfront_porch = { 5, 5, 5 },
+	.vback_porch = { 2, 2, 2 },
+	.vsync_len = { 1, 1, 1 },
+	.flags = DRM_MODE_FLAG_NHSYNC |
+		 DRM_MODE_FLAG_NVSYNC |
+		 DISPLAY_FLAGS_DE_HIGH,
+};
+
+static const struct panel_desc chunghwa_claa070wp03xglvds = {
+	.timings = &chunghwa_claa070wp03xglvds_timing,
+	.num_timings = 1,
+	.bpc = 8,
+	.size = {
+		.width = 94,
+		.height = 150,
+	},
+	.delay = {
+		.enable = 200,
+		.disable = 110,
+	},
+	.bus_format = MEDIA_BUS_FMT_RGB888_1X7X4_JEIDA,
+	.bus_flags = DRM_BUS_FLAG_DE_HIGH,
+	.connector_type = DRM_MODE_CONNECTOR_LVDS,
+};
+
 static const struct drm_display_mode chunghwa_claa101wa01a_mode = {
 	.clock = 72070,
 	.hdisplay = 1366,
@@ -4006,6 +4038,9 @@ static const struct of_device_id platform_of_match[] = {
 	}, {
 		.compatible = "chunghwa,claa070wp03xg",
 		.data = &chunghwa_claa070wp03xg,
+	}, {
+		.compatible = "chunghwa,claa070wp03xglvds",
+		.data = &chunghwa_claa070wp03xglvds,
 	}, {
 		.compatible = "chunghwa,claa101wa01a",
 		.data = &chunghwa_claa101wa01a
