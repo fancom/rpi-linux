@@ -864,12 +864,18 @@ static bool vc4_dsi_encoder_mode_fixup(struct drm_encoder *encoder,
 	pixel_clock_hz = pll_clock / dsi->divider;
 
 	adjusted_mode->clock = pixel_clock_hz / 1000;
+	DRM_ERROR("%s: divider computed as %u req clock %u adjusted_clock is %u\n",
+		__func__, divider, mode->clock, adjusted_mode->clock);
 
 	/* Given the new pixel clock, adjust HFP to keep vrefresh the same. */
 	adjusted_mode->htotal = adjusted_mode->clock * mode->htotal /
 				mode->clock;
 	adjusted_mode->hsync_end += adjusted_mode->htotal - mode->htotal;
 	adjusted_mode->hsync_start += adjusted_mode->htotal - mode->htotal;
+	DRM_ERROR("%s: pre %u %u %u, post %u %u %u\n",
+		__func__, 
+		mode->hsync_start, mode->hsync_end, mode->htotal,
+		adjusted_mode->hsync_start, adjusted_mode->hsync_end, adjusted_mode->htotal);
 
 	return true;
 }
