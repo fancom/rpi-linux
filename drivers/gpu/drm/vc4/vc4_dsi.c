@@ -864,18 +864,12 @@ static bool vc4_dsi_encoder_mode_fixup(struct drm_encoder *encoder,
 	pixel_clock_hz = pll_clock / dsi->divider;
 
 	adjusted_mode->clock = pixel_clock_hz / 1000;
-	DRM_ERROR("%s: divider computed as %u req clock %u adjusted_clock is %u\n",
-		__func__, divider, mode->clock, adjusted_mode->clock);
 
 	/* Given the new pixel clock, adjust HFP to keep vrefresh the same. */
 	adjusted_mode->htotal = adjusted_mode->clock * mode->htotal /
 				mode->clock;
 	adjusted_mode->hsync_end += adjusted_mode->htotal - mode->htotal;
 	adjusted_mode->hsync_start += adjusted_mode->htotal - mode->htotal;
-	DRM_ERROR("%s: pre %u %u %u, post %u %u %u\n",
-		__func__, 
-		mode->hsync_start, mode->hsync_end, mode->htotal,
-		adjusted_mode->hsync_start, adjusted_mode->hsync_end, adjusted_mode->htotal);
 
 	return true;
 }
@@ -895,6 +889,7 @@ static void vc4_dsi_encoder_enable(struct drm_encoder *encoder)
 	unsigned long pixel_clock_hz = mode->clock * 1000;
 	unsigned long dsip_clock;
 	unsigned long phy_clock;
+	u32 disp0_ctrl;
 	int ret;
 
 	ret = pm_runtime_get_sync(dev);
@@ -1125,25 +1120,22 @@ static void vc4_dsi_encoder_enable(struct drm_encoder *encoder)
 			iter->funcs->pre_enable(iter);
 	}
 
-	if (dsi->mode_flags & MIPI_DSI_MODE_VIDEO) {
-		DSI_PORT_WRITE(DISP0_CTRL,
-			       VC4_SET_FIELD(dsi->divider,
-					     DSI_DISP0_PIX_CLK_DIV) |
-			       VC4_SET_FIELD(dsi->format, DSI_DISP0_PFORMAT) |
-			       VC4_SET_FIELD(DSI_DISP0_LP_STOP_PERFRAME,
-					     DSI_DISP0_LP_STOP_CTRL) |
-			       DSI_DISP0_ST_END |
-			       DSI_DISP0_ENABLE);
-	} else {
-		DSI_PORT_WRITE(DISP0_CTRL,
-			       DSI_DISP0_COMMAND_MODE |
-			       DSI_DISP0_ENABLE);
-	}
+	if (dsi->mode_flags & MIPI_DSI_MODE_VIDEO)
+		disp0_ctrl = VC4_SET_FIELD(dsi->divider,
+					   DSI_DISP0_PIX_CLK_DIV) |
+			     VC4_SET_FIELD(dsi->format, DSI_DISP0_PFORMAT) |
+			     VC4_SET_FIELD(DSI_DISP0_LP_STOP_PERFRAME,
+					   DSI_DISP0_LP_STOP_CTRL) |
+			     DSI_DISP0_ST_END;
+	else
+		disp0_ctrl = DSI_DISP0_COMMAND_MODE;
+	DSI_PORT_WRITE(DISP0_CTRL, disp0_ctrl);
 
 	list_for_each_entry(iter, &dsi->bridge_chain, chain_node) {
 		if (iter->funcs->enable)
 			iter->funcs->enable(iter);
 	}
+	DSI_PORT_WRITE(DISP0_CTRL, disp0_ctrl | DSI_DISP0_ENABLE);
 
 	if (debug_dump_regs) {
 		struct drm_printer p = drm_info_printer(&dsi->pdev->dev);
