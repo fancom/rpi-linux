@@ -253,7 +253,7 @@ static int sn65dsi83_attach(struct drm_bridge *bridge,
 		.channel = 0,
 		.node = NULL,
 	};
-
+dev_err(dev, "%s\n", __func__);
 	host = of_find_mipi_dsi_host_by_node(ctx->host_node);
 	if (!host) {
 		dev_err(dev, "failed to find dsi host\n");
@@ -277,6 +277,7 @@ static int sn65dsi83_attach(struct drm_bridge *bridge,
 		dev_err(dev, "failed to attach dsi to host\n");
 		goto err_dsi_attach;
 	}
+dev_err(dev, "%s - looking good\n", __func__);
 
 	return drm_bridge_attach(bridge->encoder, ctx->panel_bridge,
 				 &ctx->bridge, flags);
@@ -290,6 +291,7 @@ static void sn65dsi83_pre_enable(struct drm_bridge *bridge)
 {
 	struct sn65dsi83 *ctx = bridge_to_sn65dsi83(bridge);
 
+DRM_ERROR("%s\n", __func__);
 	/*
 	 * Reset the chip, pull EN line low for t_reset=10ms,
 	 * then high for t_en=1ms.
@@ -365,6 +367,7 @@ static void sn65dsi83_enable(struct drm_bridge *bridge)
 	unsigned int pval;
 	u16 val;
 	int ret;
+DRM_ERROR("%s\n", __func__);
 
 	/* Clear reset, disable PLL */
 	regmap_write(ctx->regmap, REG_RC_RESET, 0x00);
@@ -454,7 +457,7 @@ static void sn65dsi83_enable(struct drm_bridge *bridge)
 static void sn65dsi83_disable(struct drm_bridge *bridge)
 {
 	struct sn65dsi83 *ctx = bridge_to_sn65dsi83(bridge);
-
+DRM_ERROR("%s\n", __func__);
 	/* Clear reset, disable PLL */
 	regmap_write(ctx->regmap, REG_RC_RESET, 0x00);
 	regmap_write(ctx->regmap, REG_RC_PLL_EN, 0x00);
@@ -463,6 +466,7 @@ static void sn65dsi83_disable(struct drm_bridge *bridge)
 static void sn65dsi83_post_disable(struct drm_bridge *bridge)
 {
 	struct sn65dsi83 *ctx = bridge_to_sn65dsi83(bridge);
+DRM_ERROR("%s\n", __func__);
 
 	/* Put the chip in reset, pull EN line low. */
 	gpiod_set_value(ctx->enable_gpio, 0);
@@ -513,7 +517,6 @@ static int sn65dsi83_parse_dt(struct sn65dsi83 *ctx, enum sn65dsi83_model model)
 	ctx->dsi_lanes = of_property_count_u32_elems(endpoint, "data-lanes");
 	ctx->host_node = of_graph_get_remote_port_parent(endpoint);
 	of_node_put(endpoint);
-
 	if (ctx->dsi_lanes < 0 || ctx->dsi_lanes > 4)
 		return -EINVAL;
 	if (!ctx->host_node)
@@ -543,12 +546,17 @@ static int sn65dsi83_parse_dt(struct sn65dsi83 *ctx, enum sn65dsi83_model model)
 	}
 
 	ret = drm_of_find_panel_or_bridge(dev->of_node, 2, 0, &panel, &panel_bridge);
-	if (ret < 0)
+	if (ret < 0) {
+		DRM_ERROR("No panel/bridge\n");
+
 		return ret;
+	}
 	if (panel) {
 		panel_bridge = devm_drm_panel_bridge_add(dev, panel);
-		if (IS_ERR(panel_bridge))
+		if (IS_ERR(panel_bridge)) {
+			DRM_ERROR("devm_drm_panel_bridge_add failed\n");
 			return PTR_ERR(panel_bridge);
+		}
 	}
 
 	ctx->panel_bridge = panel_bridge;
@@ -576,16 +584,22 @@ static int sn65dsi83_probe(struct i2c_client *client,
 		model = id->driver_data;
 
 	ctx->enable_gpio = devm_gpiod_get(ctx->dev, "enable", GPIOD_OUT_LOW);
-	if (IS_ERR(ctx->enable_gpio))
+	if (IS_ERR(ctx->enable_gpio)) {
+		DRM_ERROR("No enable GPIO\n");
 		return PTR_ERR(ctx->enable_gpio);
+	}
 
 	ret = sn65dsi83_parse_dt(ctx, model);
-	if (ret)
+	if (ret) {
+		DRM_ERROR("sn65dsi83_parse_dt failed\n");
 		return ret;
+	}
 
 	ctx->regmap = devm_regmap_init_i2c(client, &sn65dsi83_regmap_config);
-	if (IS_ERR(ctx->regmap))
+	if (IS_ERR(ctx->regmap)) {
+		DRM_ERROR("devm_regmap_init_i2c failed\n");
 		return PTR_ERR(ctx->regmap);
+	}
 
 	dev_set_drvdata(dev, ctx);
 	i2c_set_clientdata(client, ctx);
