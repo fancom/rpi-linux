@@ -239,6 +239,56 @@ static const struct regmap_config sn65dsi83_regmap_config = {
 	.max_register = REG_IRQ_STAT,
 };
 
+2tatic const struct reg_default sn65dsi65_reg_defaults[] = {
+	/* Reset */
+	{0x09, 0x00},
+
+	/* Core */
+	{0x0A, 0x05},
+	{0x0B, 0x10},
+	{0x0D, 0x00},
+	{0x10, 0x26},
+	{0x11, 0x00},
+	{0x12, 0x2a},
+	{0x18, 0x6C},
+	{0x19, 0x0F},
+	{0x1A, 0x20},
+	{0x1B, 0x00},
+
+	/* Channel A */
+	{0x20, 0xC0},
+	{0x21, 0x03},
+	{0x24, 0x38},
+	{0x25, 0x04},
+	{0x28, 0xE1},
+	{0x29, 0x03},
+	{0x2C, 0x23},
+	{0x2D, 0x00},
+	{0x30, 0x0A},
+	{0x31, 0x00},
+	{0x34, 0x23},
+	{0x36, 0x0A},
+	{0x38, 0x23},
+
+	/* other settings */
+	{0x3A, 0x0A},
+	{0x3B, 0x00},
+	{0x3D, 0x00},
+	{0x3E, 0x00},
+
+	/* interrupts */
+	{0xE0, 0x00},
+	{0xE1, 0x00},
+	{0xE2, 0x00},
+	{0xE5, 0x00},
+	{0xE6, 0x00},
+
+	/* Test */
+	{0x18, 0x6C},
+	{0x10, 0x06},
+	{0x3C, 0x10},
+};
+
 static struct sn65dsi83 *bridge_to_sn65dsi83(struct drm_bridge *bridge)
 {
 	return container_of(bridge, struct sn65dsi83, bridge);
@@ -369,7 +419,7 @@ static void sn65dsi83_enable(struct drm_bridge *bridge)
 	struct sn65dsi83 *ctx = bridge_to_sn65dsi83(bridge);
 	unsigned int pval;
 	u16 val;
-	int ret;
+	int ret, i;
 
 	/* Clear reset, disable PLL */
 	regmap_write(ctx->regmap, REG_RC_RESET, 0x00);
@@ -467,6 +517,11 @@ static void sn65dsi83_enable(struct drm_bridge *bridge)
 	/* Clear all errors that got asserted during initialization. */
 	regmap_read(ctx->regmap, REG_IRQ_STAT, &pval);
 	regmap_write(ctx->regmap, REG_IRQ_STAT, pval);
+
+	for (i = 0; i < ARRAY_SIZE(sn65dsi65_reg_defaults); i++) {
+		struct reg_default conf = sn65dsi65_reg_defaults[i];
+		regmap_write(ctx->regmap, conf.reg, conf.def);
+	}
 }
 
 static void sn65dsi83_disable(struct drm_bridge *bridge)
