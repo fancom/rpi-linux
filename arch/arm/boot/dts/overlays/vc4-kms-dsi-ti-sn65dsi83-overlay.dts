@@ -114,7 +114,7 @@
 						reg = <0>;
 						bridge_in: endpoint {
 							remote-endpoint = <&dsi_out_port>;
-							data-lanes = <0 1>;
+							data-lanes = <0 1 2 3>;
 						};
 					};
 
