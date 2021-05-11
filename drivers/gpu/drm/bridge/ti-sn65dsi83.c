@@ -498,6 +498,14 @@ static void sn65dsi83_enable(struct drm_bridge *bridge)
 		     ctx->mode.vsync_start - ctx->mode.vdisplay);
 	regmap_write(ctx->regmap, REG_VID_CHA_TEST_PATTERN, 0x00);
 
+	printk(KERN_ERR "TIM: %s: sn65dsi65_reg_defaults\n", __func__);
+	for (i = 0; i < ARRAY_SIZE(sn65dsi65_reg_defaults); i++) {
+		struct reg_default conf = sn65dsi65_reg_defaults[i];
+		regmap_write(ctx->regmap, conf.reg, conf.def);
+	}
+	printk(KERN_ERR "TIM: %s: written %d sn65dsi65_reg_defaults\n",
+	       __func__, i);
+
 	/* Enable PLL */
 	regmap_write(ctx->regmap, REG_RC_PLL_EN, REG_RC_PLL_EN_PLL_EN);
 	usleep_range(3000, 4000);
@@ -517,11 +525,6 @@ static void sn65dsi83_enable(struct drm_bridge *bridge)
 	/* Clear all errors that got asserted during initialization. */
 	regmap_read(ctx->regmap, REG_IRQ_STAT, &pval);
 	regmap_write(ctx->regmap, REG_IRQ_STAT, pval);
-
-	for (i = 0; i < ARRAY_SIZE(sn65dsi65_reg_defaults); i++) {
-		struct reg_default conf = sn65dsi65_reg_defaults[i];
-		regmap_write(ctx->regmap, conf.reg, conf.def);
-	}
 }
 
 static void sn65dsi83_disable(struct drm_bridge *bridge)
