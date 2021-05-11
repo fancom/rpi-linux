@@ -222,4 +222,18 @@
 			status = "okay";
 		};
 	};
+
+	fragment@29 {
+		target = <&pixelvalve3>;
+		__overlay__  {
+			status = "okay";
+		};
+	};
+
+	fragment@30 {
+		target = <&pixelvalve4>;
+		__overlay__  {
+			status = "okay";
+		};
+	};
 };
