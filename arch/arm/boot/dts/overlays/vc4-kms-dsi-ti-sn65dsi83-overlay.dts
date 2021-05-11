@@ -96,7 +96,7 @@
 			clock-frequency = <400000>;
 
 			sn65dsi84@2c {
-				compatible = "ti,sn65dsi83";
+				compatible = "ti,sn65dsi84";
 				reg = <0x2c>;
 				enable-gpios = <&gpio 11 GPIO_ACTIVE_HIGH>;
 
