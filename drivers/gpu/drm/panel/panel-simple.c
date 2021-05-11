@@ -509,6 +509,8 @@ static int panel_simple_probe(struct device *dev, const struct panel_desc *desc)
 	u32 bus_flags;
 	int err;
 
+	printk(KERN_ERR "TIM: %s: init\n", __func__);
+
 	panel = devm_kzalloc(dev, sizeof(*panel), GFP_KERNEL);
 	if (!panel)
 		return -ENOMEM;
@@ -627,6 +629,8 @@ static int panel_simple_probe(struct device *dev, const struct panel_desc *desc)
 	drm_panel_add(&panel->base);
 
 	dev_set_drvdata(dev, panel);
+
+	printk(KERN_ERR "TIM: %s: exit\n", __func__);
 
 	return 0;
 
@@ -3932,8 +3936,39 @@ static const struct panel_desc arm_rtsm = {
 	.bus_format = MEDIA_BUS_FMT_RGB888_1X24,
 };
 
+static const struct drm_display_mode innolux_g156hce_mode = {
+	.clock = 70930,
+
+	.hdisplay = 1920,
+	.hsync_start = 1920 + 105, //hactive + hfront-porch
+	.hsync_end = 1920 + 105 + 105, //.hsync_start + hback-porch
+	.htotal = 1920 + 105 + 105 + 80, // .hsync_end + hsync-len
+
+	.vdisplay = 1080,
+	.vsync_start = 1080 + 30,
+	.vsync_end = 1080 + 30 + 30,
+	.vtotal = 1080 + 30 + 30 + 4,
+	.flags = DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_NVSYNC,
+};
+
+static const struct panel_desc innolux_g156hce = {
+	.modes = &innolux_g156hce_mode,
+	.num_modes = 1,
+	.bpc = 8,
+	.size = {
+		.width = 344,
+		.height = 194,
+	},
+	.bus_format = MEDIA_BUS_FMT_RGB888_1X24, //MEDIA_BUS_FMT_RGB888 only?
+	.bus_flags = DRM_BUS_FLAG_DE_HIGH,
+	.connector_type = DRM_MODE_CONNECTOR_DSI,
+};
+
 static const struct of_device_id platform_of_match[] = {
 	{
+		.compatible = "innolux,g156hce-l01",
+		.data = &innolux_g156hce,
+	}, {
 		.compatible = "ampire,am-1280800n3tzqw-t00h",
 		.data = &ampire_am_1280800n3tzqw_t00h,
 	}, {
@@ -4348,6 +4383,8 @@ MODULE_DEVICE_TABLE(of, platform_of_match);
 static int panel_simple_platform_probe(struct platform_device *pdev)
 {
 	const struct of_device_id *id;
+
+	printk(KERN_ERR "TIM: %s: init\n", __func__);
 
 	id = of_match_node(platform_of_match, pdev->dev.of_node);
 	if (!id)
