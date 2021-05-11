@@ -33,6 +33,11 @@
 				brcm,function = <BCM2835_FSEL_ALT2>;
 				brcm,pull = <BCM2835_PUD_UP>;
 			};
+
+			backlight_en: backlight_en {
+				brcm,pins = <17>; /* pin 50 */
+				brcm,function = <BCM2835_FSEL_GPIO_OUT>;
+			};
 		};
 	};
 
@@ -41,7 +46,7 @@
 		frag1: __overlay__ {
 			pinctrl-names = "default";
 			pinctrl-0 = <&pwm_pins>;
-			assigned-clock-rates = <1000000>;
+			assigned-clock-rates = <100000000>;
 			status = "okay";
 		};
 	};
