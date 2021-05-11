@@ -912,12 +912,14 @@ static void vc4_dsi_encoder_enable(struct drm_encoder *encoder)
 	 * PLLD_DSI1 is an integer divider and its rate selection will
 	 * never round up.
 	 */
+	printk(KERN_ERR "TIM: %s: pixel_clock_hz %ld, divider %ld\n", __func__, pixel_clock_hz, dsi->divider);
 	phy_clock = (pixel_clock_hz + 1000) * dsi->divider;
 	ret = clk_set_rate(dsi->pll_phy_clock, phy_clock);
 	if (ret) {
 		dev_err(&dsi->pdev->dev,
 			"Failed to set phy clock to %ld: %d\n", phy_clock, ret);
 	}
+	printk(KERN_ERR "TIM: %s: pll_phy_clock %ld\n", __func__, dsi->pll_phy_clock);
 
 	/* Reset the DSI and all its fifos. */
 	DSI_PORT_WRITE(CTRL,
@@ -977,6 +979,7 @@ static void vc4_dsi_encoder_enable(struct drm_encoder *encoder)
 		mdelay(1);
 	}
 
+	printk(KERN_ERR "TIM: %s: escape_clock %ld\n", __func__, dsi->escape_clock);
 	ret = clk_prepare_enable(dsi->escape_clock);
 	if (ret) {
 		DRM_ERROR("Failed to turn on DSI escape clock: %d\n", ret);
@@ -990,6 +993,7 @@ static void vc4_dsi_encoder_enable(struct drm_encoder *encoder)
 	}
 
 	hs_clock = clk_get_rate(dsi->pll_phy_clock);
+	printk(KERN_ERR "TIM: %s: hs_clock %ld\n", __func__, hs_clock);
 
 	/* Yes, we set the DSI0P/DSI1P pixel clock to the byte rate,
 	 * not the pixel clock rate.  DSIxP take from the APHY's byte,
@@ -1005,6 +1009,7 @@ static void vc4_dsi_encoder_enable(struct drm_encoder *encoder)
 			dsip_clock, ret);
 	}
 
+	printk(KERN_ERR "TIM: %s: pixel_clock %ld\n", __func__, dsi->pixel_clock);
 	ret = clk_prepare_enable(dsi->pixel_clock);
 	if (ret) {
 		DRM_ERROR("Failed to turn on DSI pixel clock: %d\n", ret);
