@@ -919,7 +919,7 @@ static void vc4_dsi_encoder_enable(struct drm_encoder *encoder)
 		dev_err(&dsi->pdev->dev,
 			"Failed to set phy clock to %ld: %d\n", phy_clock, ret);
 	}
-	printk(KERN_ERR "TIM: %s: pll_phy_clock %ld\n", __func__, dsi->pll_phy_clock);
+	printk(KERN_ERR "TIM: %s: pll_phy_clock set to %ld\n", __func__, phy_clock);
 
 	/* Reset the DSI and all its fifos. */
 	DSI_PORT_WRITE(CTRL,
@@ -979,7 +979,6 @@ static void vc4_dsi_encoder_enable(struct drm_encoder *encoder)
 		mdelay(1);
 	}
 
-	printk(KERN_ERR "TIM: %s: escape_clock %ld\n", __func__, dsi->escape_clock);
 	ret = clk_prepare_enable(dsi->escape_clock);
 	if (ret) {
 		DRM_ERROR("Failed to turn on DSI escape clock: %d\n", ret);
@@ -1009,7 +1008,7 @@ static void vc4_dsi_encoder_enable(struct drm_encoder *encoder)
 			dsip_clock, ret);
 	}
 
-	printk(KERN_ERR "TIM: %s: pixel_clock %ld\n", __func__, dsi->pixel_clock);
+	printk(KERN_ERR "TIM: %s: pixel_clock set to %ld\n", __func__, dsip_clock);
 	ret = clk_prepare_enable(dsi->pixel_clock);
 	if (ret) {
 		DRM_ERROR("Failed to turn on DSI pixel clock: %d\n", ret);
