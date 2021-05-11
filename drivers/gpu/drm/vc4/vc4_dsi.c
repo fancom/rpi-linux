@@ -892,6 +892,8 @@ static void vc4_dsi_encoder_enable(struct drm_encoder *encoder)
 	u32 disp0_ctrl;
 	int ret;
 
+	printk(KERN_ERR "TIM: %s: init\n", __func__);
+
 	ret = pm_runtime_get_sync(dev);
 	if (ret) {
 		DRM_ERROR("Failed to runtime PM enable on DSI%d\n", dsi->variant->port);
@@ -1142,6 +1144,8 @@ static void vc4_dsi_encoder_enable(struct drm_encoder *encoder)
 		dev_info(&dsi->pdev->dev, "DSI regs after:\n");
 		drm_print_regset32(&p, &dsi->regset);
 	}
+
+	printk(KERN_ERR "TIM: %s: exit\n", __func__);
 }
 
 static ssize_t vc4_dsi_host_transfer(struct mipi_dsi_host *host,
@@ -1554,6 +1558,8 @@ static int vc4_dsi_bind(struct device *dev, struct device *master, void *data)
 	dma_cap_mask_t dma_mask;
 	int ret;
 
+	printk(KERN_ERR "TIM: %s: init\n", __func__);
+
 	match = of_match_device(vc4_dsi_dt_match, dev);
 	if (!match)
 		return -ENODEV;
@@ -1713,6 +1719,8 @@ static int vc4_dsi_bind(struct device *dev, struct device *master, void *data)
 	vc4_debugfs_add_regset32(drm, dsi->variant->debugfs_name, &dsi->regset);
 
 	pm_runtime_enable(dev);
+
+	printk(KERN_ERR "TIM: %s: exit\n", __func__);
 
 	return 0;
 }
