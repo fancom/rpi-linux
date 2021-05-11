@@ -3970,7 +3970,7 @@ static const struct drm_display_mode innolux_g156hce_mode = {
 
 static const struct panel_desc innolux_g156hce = {
 #ifdef INNOLUX_G156HCE_TIMING
-	.timings = &hmi_lvds_timing,
+	.timings = &innolux_g156hce_timing,
 	.num_timings = 1,
 #else
 	.modes = &innolux_g156hce_mode,
