@@ -635,6 +635,7 @@ static int panel_simple_probe(struct device *dev, const struct panel_desc *desc)
 	return 0;
 
 free_ddc:
+	printk(KERN_ERR "TIM: %s: exit (error)\n", __func__);
 	if (panel->ddc)
 		put_device(&panel->ddc->dev);
 
@@ -3936,6 +3937,21 @@ static const struct panel_desc arm_rtsm = {
 	.bus_format = MEDIA_BUS_FMT_RGB888_1X24,
 };
 
+#define INNOLUX_G156HCE_TIMING
+#ifdef INNOLUX_G156HCE_TIMING
+static const struct display_timing innolux_g156hce_timing = {
+	.pixelclock = { 70930000, 70930000, 70930000 },
+	.hactive = { 1920, 1920, 1920 },
+	.hfront_porch = { 16, 16, 16 },
+	.hback_porch = { 32, 32, 32 },
+	.hsync_len = { 16, 16, 16 },
+	.vactive = { 1080, 1080, 1080 },
+	.vfront_porch = { 5, 5, 5 },
+	.vback_porch = { 2, 2, 2 },
+	.vsync_len = { 1, 1, 1 },
+	.flags = DISPLAY_FLAGS_DE_HIGH,
+};
+#else
 static const struct drm_display_mode innolux_g156hce_mode = {
 	.clock = 70930,
 
@@ -3950,18 +3966,28 @@ static const struct drm_display_mode innolux_g156hce_mode = {
 	.vtotal = 1080 + 30 + 30 + 4,
 	.flags = DISPLAY_FLAGS_DE_HIGH,
 };
+#endif
 
 static const struct panel_desc innolux_g156hce = {
+#ifdef INNOLUX_G156HCE_TIMING
+	.timings = &hmi_lvds_timing,
+	.num_timings = 1,
+#else
 	.modes = &innolux_g156hce_mode,
 	.num_modes = 1,
+#endif
 	.bpc = 8,
 	.size = {
 		.width = 344,
 		.height = 194,
 	},
-	.bus_format = MEDIA_BUS_FMT_RGB888_1X7X4_SPWG, //MEDIA_BUS_FMT_RGB888 only?
+	.delay = {
+		.enable = 200,
+		.disable = 110,
+	},
+	.bus_format = MEDIA_BUS_FMT_RGB888_1X7X4_SPWG, //MEDIA_BUS_FMT_RGB888_1X24?
 	.bus_flags = DRM_BUS_FLAG_DE_HIGH,
-	.connector_type = DRM_MODE_CONNECTOR_LVDS, //DRM_MODE_CONNECTOR_LVDS
+	.connector_type = DRM_MODE_CONNECTOR_LVDS,
 };
 
 static const struct of_device_id platform_of_match[] = {
