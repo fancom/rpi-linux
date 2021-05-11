@@ -3961,7 +3961,7 @@ static const struct panel_desc innolux_g156hce = {
 	},
 	.bus_format = MEDIA_BUS_FMT_RGB888_1X24, //MEDIA_BUS_FMT_RGB888 only?
 	.bus_flags = DRM_BUS_FLAG_DE_HIGH,
-	.connector_type = DRM_MODE_CONNECTOR_DSI,
+	.connector_type = DRM_MODE_CONNECTOR_DSI, //DRM_MODE_CONNECTOR_LVDS
 };
 
 static const struct of_device_id platform_of_match[] = {

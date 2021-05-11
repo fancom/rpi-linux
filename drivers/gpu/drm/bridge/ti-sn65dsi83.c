@@ -239,7 +239,7 @@ static const struct regmap_config sn65dsi83_regmap_config = {
 	.max_register = REG_IRQ_STAT,
 };
 
-2tatic const struct reg_default sn65dsi65_reg_defaults[] = {
+static const struct reg_default sn65dsi65_reg_defaults[] = {
 	/* Reset */
 	{0x09, 0x00},
 
