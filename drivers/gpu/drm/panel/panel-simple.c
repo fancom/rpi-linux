@@ -3948,7 +3948,7 @@ static const struct drm_display_mode innolux_g156hce_mode = {
 	.vsync_start = 1080 + 30,
 	.vsync_end = 1080 + 30 + 30,
 	.vtotal = 1080 + 30 + 30 + 4,
-	.flags = DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_NVSYNC,
+	.flags = DISPLAY_FLAGS_DE_HIGH,
 };
 
 static const struct panel_desc innolux_g156hce = {
@@ -3959,9 +3959,9 @@ static const struct panel_desc innolux_g156hce = {
 		.width = 344,
 		.height = 194,
 	},
-	.bus_format = MEDIA_BUS_FMT_RGB888_1X24, //MEDIA_BUS_FMT_RGB888 only?
+	.bus_format = MEDIA_BUS_FMT_RGB888_1X7X4_SPWG, //MEDIA_BUS_FMT_RGB888 only?
 	.bus_flags = DRM_BUS_FLAG_DE_HIGH,
-	.connector_type = DRM_MODE_CONNECTOR_DSI, //DRM_MODE_CONNECTOR_LVDS
+	.connector_type = DRM_MODE_CONNECTOR_LVDS, //DRM_MODE_CONNECTOR_LVDS
 };
 
 static const struct of_device_id platform_of_match[] = {
