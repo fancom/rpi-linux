@@ -325,7 +325,7 @@ static int sn65dsi83_attach(struct drm_bridge *bridge,
 
 	dsi->lanes = ctx->dsi_lanes;
 	dsi->format = MIPI_DSI_FMT_RGB888;
-	dsi->mode_flags = MIPI_DSI_MODE_VIDEO | MIPI_DSI_MODE_VIDEO_BURST;
+	dsi->mode_flags = MIPI_DSI_MODE_VIDEO /*| MIPI_DSI_MODE_VIDEO_BURST*/;
 
 	ret = mipi_dsi_attach(dsi);
 	if (ret < 0) {
@@ -583,6 +583,8 @@ sn65dsi83_mode_valid(struct drm_bridge *bridge,
 		break;
 	}
 
+	printk(KERN_ERR "TIM: %s: mode %ux%u@%d is valid\n", __func__, mode->hdisplay, mode->vdisplay, mode->clock);
+
 	return MODE_OK;
 }
 
@@ -627,9 +629,15 @@ static int sn65dsi83_parse_dt(struct sn65dsi83 *ctx, enum sn65dsi83_model model)
 	int ret;
 
 	endpoint = of_graph_get_endpoint_by_regs(dev->of_node, 0, 0);
+
+	printk(KERN_ERR "TIM: %s: found endpoint %s\n",
+	       __func__, endpoint->full_name ? endpoint->full_name: endpoint->name);
+
 	ctx->dsi_lanes = of_property_count_u32_elems(endpoint, "data-lanes");
 	ctx->host_node = of_graph_get_remote_port_parent(endpoint);
 	of_node_put(endpoint);
+
+	printk(KERN_ERR "TIM: %s: dsi_lanes count is %d\n", __func__, ctx->dsi_lanes);
 
 	if (ctx->dsi_lanes < 0 || ctx->dsi_lanes > 4)
 		return -EINVAL;
@@ -662,7 +670,9 @@ static int sn65dsi83_parse_dt(struct sn65dsi83 *ctx, enum sn65dsi83_model model)
 	ret = drm_of_find_panel_or_bridge(dev->of_node, 2, 0, &panel, &panel_bridge);
 	if (ret < 0)
 		return ret;
+
 	if (panel) {
+		printk(KERN_ERR "TIM: %s: panel found\n", __func__);
 		panel_bridge = devm_drm_panel_bridge_add(dev, panel);
 		if (IS_ERR(panel_bridge))
 			return PTR_ERR(panel_bridge);
