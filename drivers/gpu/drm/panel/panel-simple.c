@@ -489,6 +489,9 @@ static void panel_simple_parse_panel_timing_node(struct device *dev,
 		if (ot->flags != dt->flags)
 			continue;
 
+		printk(KERN_ERR "TIM: %s: %dx%d@%d\n"
+		       , __func__, dt->hactive.typ, dt->vactive.typ, dt->pixelclock.typ);
+
 		videomode_from_timing(ot, &vm);
 		drm_display_mode_from_videomode(&vm, &panel->override_mode);
 		panel->override_mode.type |= DRM_MODE_TYPE_DRIVER |
@@ -498,6 +501,7 @@ static void panel_simple_parse_panel_timing_node(struct device *dev,
 
 	if (WARN_ON(!panel->override_mode.type))
 		dev_err(dev, "Reject override mode: No display_timing found\n");
+	printk(KERN_ERR "TIM: %s: Panel timing registerd?\n", __func__);
 }
 
 static int panel_simple_probe(struct device *dev, const struct panel_desc *desc)
@@ -560,8 +564,11 @@ static int panel_simple_probe(struct device *dev, const struct panel_desc *desc)
 		if (err)
 			goto free_ddc;
 	} else {
-		if (!of_get_display_timing(dev->of_node, "panel-timing", &dt))
+		if (!of_get_display_timing(dev->of_node, "panel-timing", &dt)) {
+			printk(KERN_ERR "TIM: %s: no panel timing in %s. call to panel_simple_parse_panel_timing_node\n"
+			       , __func__, dev->of_node->full_name);
 			panel_simple_parse_panel_timing_node(dev, panel, &dt);
+		}
 	}
 
 	connector_type = desc->connector_type;
