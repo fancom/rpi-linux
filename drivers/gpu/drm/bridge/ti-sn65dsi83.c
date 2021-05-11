@@ -282,11 +282,12 @@ static const struct reg_default sn65dsi65_reg_defaults[] = {
 	{0xE2, 0x00},
 	{0xE5, 0x00},
 	{0xE6, 0x00},
-
+#ifdef SN65DSI83_TEST_PATTERN
 	/* Test */
 	{0x18, 0x6C},
 	{0x10, 0x06},
 	{0x3C, 0x10},
+#endif
 };
 
 static struct sn65dsi83 *bridge_to_sn65dsi83(struct drm_bridge *bridge)
