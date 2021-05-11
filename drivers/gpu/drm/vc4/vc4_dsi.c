@@ -42,6 +42,8 @@
 #include "vc4_drv.h"
 #include "vc4_regs.h"
 
+#define DEBUG
+
 #define DSI_CMD_FIFO_DEPTH  16
 #define DSI_PIX_FIFO_DEPTH 256
 #define DSI_PIX_FIFO_WIDTH   4
@@ -1800,3 +1802,5 @@ struct platform_driver vc4_dsi_driver = {
 		.of_match_table = vc4_dsi_dt_match,
 	},
 };
+
+#undef DEBUG
