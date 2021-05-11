@@ -681,7 +681,7 @@ static int sn65dsi83_probe(struct i2c_client *client,
 	struct sn65dsi83 *ctx;
 	int ret;
 
-	printk(KERN_ERR "TIM: %s: init\n", __file__);
+	printk(KERN_ERR "TIM: %s: init\n", __func__);
 
 	ctx = devm_kzalloc(dev, sizeof(*ctx), GFP_KERNEL);
 	if (!ctx)
@@ -713,7 +713,7 @@ static int sn65dsi83_probe(struct i2c_client *client,
 	ctx->bridge.of_node = dev->of_node;
 	drm_bridge_add(&ctx->bridge);
 
-	printk(KERN_ERR "TIM: %s: exit\n", __init__);
+	printk(KERN_ERR "TIM: %s: exit\n", __func__);
 
 	return 0;
 }
