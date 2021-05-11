@@ -19,8 +19,8 @@
 		target = <&gpio>;
 		__overlay__ {
 			pwm_pins: pwm_pins {
-				brcm,pins = <18>; /* pin 50 */
-				brcm,function = <BCM2835_FSEL_GPIO_OUT>;
+				brcm,pins = <18>; /* pin 49 */
+				brcm,function = <BCM2835_FSEL_ALT5>;
 			};
 
 			dsi_lvds_en: dsi_lvds_en {
