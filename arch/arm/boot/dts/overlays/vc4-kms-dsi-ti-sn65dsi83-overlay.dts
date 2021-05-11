@@ -46,7 +46,7 @@
 		frag1: __overlay__ {
 			pinctrl-names = "default";
 			pinctrl-0 = <&pwm_pins>;
-			assigned-clock-rates = <1000000>;
+			assigned-clock-rates = <100000000>;
 			status = "okay";
 		};
 	};
