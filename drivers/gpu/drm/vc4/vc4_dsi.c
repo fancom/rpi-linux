@@ -912,14 +912,15 @@ static void vc4_dsi_encoder_enable(struct drm_encoder *encoder)
 	 * PLLD_DSI1 is an integer divider and its rate selection will
 	 * never round up.
 	 */
-	printk(KERN_ERR "TIM: %s: pixel_clock_hz %ld, divider %ld\n", __func__, pixel_clock_hz, dsi->divider);
+	printk(KERN_ERR "TIM: %s: pixel_clock_hz %lu, divider %u\n",
+	       __func__, pixel_clock_hz, dsi->divider);
 	phy_clock = (pixel_clock_hz + 1000) * dsi->divider;
 	ret = clk_set_rate(dsi->pll_phy_clock, phy_clock);
 	if (ret) {
 		dev_err(&dsi->pdev->dev,
 			"Failed to set phy clock to %ld: %d\n", phy_clock, ret);
 	}
-	printk(KERN_ERR "TIM: %s: pll_phy_clock set to %ld\n", __func__, phy_clock);
+	printk(KERN_ERR "TIM: %s: pll_phy_clock is now %lu\n", __func__, phy_clock);
 
 	/* Reset the DSI and all its fifos. */
 	DSI_PORT_WRITE(CTRL,
@@ -980,6 +981,7 @@ static void vc4_dsi_encoder_enable(struct drm_encoder *encoder)
 	}
 
 	ret = clk_prepare_enable(dsi->escape_clock);
+	printk(KERN_ERR "TIM: %s: escape_clock %lu\n", __func__, clk_get_rate(dsi->escape_clock));
 	if (ret) {
 		DRM_ERROR("Failed to turn on DSI escape clock: %d\n", ret);
 		return;
@@ -1008,7 +1010,7 @@ static void vc4_dsi_encoder_enable(struct drm_encoder *encoder)
 			dsip_clock, ret);
 	}
 
-	printk(KERN_ERR "TIM: %s: pixel_clock set to %ld\n", __func__, dsip_clock);
+	printk(KERN_ERR "TIM: %s: pixel_clock %lu\n", __func__, clk_get_rate(dsi->pixel_clock));
 	ret = clk_prepare_enable(dsi->pixel_clock);
 	if (ret) {
 		DRM_ERROR("Failed to turn on DSI pixel clock: %d\n", ret);

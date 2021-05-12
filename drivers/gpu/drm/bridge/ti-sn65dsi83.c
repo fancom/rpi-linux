@@ -688,6 +688,17 @@ static int sn65dsi83_parse_dt(struct sn65dsi83 *ctx, enum sn65dsi83_model model)
 
 	if (panel) {
 		printk(KERN_ERR "TIM: %s: panel found\n", __func__);
+		if (panel->dev) {
+			if (panel->dev->of_node) {
+				printk(KERN_ERR "TIM: %s: panel of_node %s\n",
+				       __func__, panel->dev->of_node->full_name);
+			}
+			printk(KERN_ERR "TIM: %s: panel dev %s\n",
+			       __func__, panel->dev->init_name);
+		} else {
+			printk(KERN_ERR "TIM: %s: panel invalid dev/of_node\n",
+			       __func__);
+		}
 		panel_bridge = devm_drm_panel_bridge_add(dev, panel);
 		if (IS_ERR(panel_bridge))
 			return PTR_ERR(panel_bridge);
