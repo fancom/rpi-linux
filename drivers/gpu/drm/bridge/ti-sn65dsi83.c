@@ -397,9 +397,12 @@ static u8 sn65dsi83_get_dsi_range(struct sn65dsi83 *ctx)
 	 *  DSI_CLK = mode clock * bpp / dsi_data_lanes / 2
 	 * the 2 is there because the bus is DDR.
 	 */
-	return DIV_ROUND_UP(clamp((unsigned int)ctx->mode.clock *
+	u8 dsiClk = DIV_ROUND_UP(clamp((unsigned int)ctx->mode.clock *
 			    mipi_dsi_pixel_format_to_bpp(ctx->dsi->format) /
 			    ctx->dsi_lanes / 2, 40000U, 500000U), 5000U);
+	printk(KERN_ERR "TIM: %s: set dsiClk to %d based on %ld, %d, %d\n",
+	       __func__, dsiClk, ctx->mode.clock, ctx->dsi->format, ctx->dsi_lanes);
+	return dsiClk;
 }
 
 static u8 sn65dsi83_get_dsi_div(struct sn65dsi83 *ctx)
