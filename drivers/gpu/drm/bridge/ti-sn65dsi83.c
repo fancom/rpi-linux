@@ -292,6 +292,11 @@ static const struct reg_default sn65dsi65_reg_defaults[] = {
 #endif
 };
 
+/* fwd declaration */
+static void sn65dsi83_mode_set(struct drm_bridge *bridge,
+			       const struct drm_display_mode *mode,
+			       const struct drm_display_mode *adj);
+
 static struct sn65dsi83 *bridge_to_sn65dsi83(struct drm_bridge *bridge)
 {
 	return container_of(bridge, struct sn65dsi83, bridge);
