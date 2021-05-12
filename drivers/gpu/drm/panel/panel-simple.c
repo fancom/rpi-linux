@@ -3971,7 +3971,6 @@ static const struct drm_display_mode innolux_g156hce_mode = {
 	.vsync_start = 1080 + 30,
 	.vsync_end = 1080 + 30 + 30,
 	.vtotal = 1080 + 30 + 30 + 4,
-	.flags = DISPLAY_FLAGS_DE_HIGH,
 };
 #endif
 
@@ -3992,7 +3991,7 @@ static const struct panel_desc innolux_g156hce = {
 		.enable = 200,
 		.disable = 110,
 	},
-	.bus_format = MEDIA_BUS_FMT_RGB888_1X7X4_SPWG, //MEDIA_BUS_FMT_RGB888_1X24?
+	.bus_format = MEDIA_BUS_FMT_RGB888_1X7X4_SPWG,
 	.bus_flags = DRM_BUS_FLAG_DE_HIGH,
 	.connector_type = DRM_MODE_CONNECTOR_LVDS,
 };
