@@ -134,7 +134,6 @@
 		__overlay__ {
 			#address-cells = <1>;
 			#size-cells = <0>;
-			power-domains = <&power 18>;
 			status = "okay";
 			port {
 				dsi_out_port: endpoint {
