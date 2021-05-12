@@ -1,3 +1,5 @@
+#define MODE_HACK
+
 // SPDX-License-Identifier: GPL-2.0
 /*
  * TI SN65DSI83,84,85 driver
@@ -355,6 +357,15 @@ static void sn65dsi83_pre_enable(struct drm_bridge *bridge)
 	usleep_range(10000, 11000);
 	gpiod_set_value(ctx->enable_gpio, 1);
 	usleep_range(1000, 1100);
+
+#ifdef MODE_HACK
+	/* TODO: hack until mode_set and mode_valid are called */
+	struct drm_display_mode *adjusted_mode =
+		&(bridge->encoder->crtc->state->adjusted_mode);
+	sn65dsi83_mode_set(bridge, ctx, adjusted_mode);
+	ctx->lvds_format_24bpp = true;
+	ctx->lvds_format_jeida = false;
+#endif
 }
 
 static u8 sn65dsi83_get_lvds_range(struct sn65dsi83 *ctx)
