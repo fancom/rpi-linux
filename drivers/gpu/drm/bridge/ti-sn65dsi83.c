@@ -367,7 +367,7 @@ static void sn65dsi83_pre_enable(struct drm_bridge *bridge)
 	/* TODO: hack until mode_set and mode_valid are called */
 	struct drm_display_mode *adjusted_mode =
 		&(bridge->encoder->crtc->state->adjusted_mode);
-	sn65dsi83_mode_set(bridge, ctx, adjusted_mode);
+	sn65dsi83_mode_set(bridge, &ctx->mode, adjusted_mode);
 	ctx->lvds_format_24bpp = true;
 	ctx->lvds_format_jeida = false;
 #endif
