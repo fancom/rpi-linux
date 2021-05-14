@@ -83,14 +83,14 @@
 					clock-frequency = <70930000>;
 
 					hactive = <1920>;
-					hsync-len = <80>;
-					hfront-porch = <105>;
-					hback-porch = <105>;
+					hsync-len = <35>;
+					hfront-porch = <35>;
+					hback-porch = <35>;
 
 					vactive = <1080>;
-					vsync-len = <4>;
-					vfront-porch = <30>;
-					vback-porch = <30>;
+					vsync-len = <10>;
+					vfront-porch = <10>;
+					vback-porch = <10>;
 
 					hsync-active = <0>;
 					vsync-active = <0>;
