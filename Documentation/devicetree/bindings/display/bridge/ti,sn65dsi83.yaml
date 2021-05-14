@@ -88,7 +88,7 @@ properties:
 
       port@3:
         $ref: /schemas/graph.yaml#/properties/port
-        description: Video port for LVDS Channel-A output (panel or bridge).
+        description: Video port for LVDS Channel-B output (panel or bridge).
 
         properties:
           endpoint:

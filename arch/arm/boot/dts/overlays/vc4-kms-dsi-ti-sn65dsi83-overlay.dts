@@ -67,16 +67,50 @@
 			};
 
 			panel: panel {
-				compatible = "innolux,g156hce-l01", "simple-panel";
+				compatible = "innolux,g156hce-l01", "panel-lvds";
 				label = "TIM: fancom display";
 				status = "okay";
 
 				backlight = <&backlight_lvds>;
 				power-supply = <&vdd_3v3_reg>;
 
-				port {
-					panel_in_lvds: endpoint {
-						remote-endpoint = <&bridge_out>;
+				width-mm = <344>;
+				height-mm = <194>;
+
+				data-mapping = "vesa-24";
+
+				panel-timing {
+					clock-frequency = <70930000>;
+
+					hactive = <1920>;
+					hsync-len = <80>;
+					hfront-porch = <105>;
+					hback-porch = <105>;
+
+					vactive = <1080>;
+					vsync-len = <4>;
+					vfront-porch = <30>;
+					vback-porch = <30>;
+
+					hsync-active = <0>;
+					vsync-active = <0>;
+					de-active = <1>;
+					pixelclk-active = <1>;
+				};
+
+				ports {
+					port@0 {
+						reg = <0>;
+						panel_in_lvds_channelA: endpoint {
+							remote-endpoint = <&bridge_out_channelA>;
+						};
+					};
+
+					port@1 {
+						reg = <1>;
+						panel_in_lvds_channelB: endpoint {
+							remote-endpoint = <&bridge_out_channelB>;
+						};
 					};
 				};
 			};
@@ -120,8 +154,15 @@
 
 					port@2 {
 						reg = <2>;
-						bridge_out: endpoint {
-							remote-endpoint = <&panel_in_lvds>;
+						bridge_out_channelA: endpoint {
+							remote-endpoint = <&panel_in_lvds_channelA>;
+						};
+					};
+
+					port@3 {
+						reg = <3>;
+						bridge_out_channelB: endpoint {
+							remote-endpoint = <&panel_in_lvds_channelB>;
 						};
 					};
 				};
