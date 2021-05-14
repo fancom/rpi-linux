@@ -258,12 +258,14 @@ static const struct reg_default sn65dsi65_reg_defaults[] = {
 	{0x1B, 0x00},
 
 	/* Channel A */
-	{0x20, 0xC0},
-	{0x21, 0x03},
+	//{0x20, 0xC0},
+	//{0x21, 0x03},
+	{0x20, 0x80},
+	{0x21, 0x07},
 	{0x24, 0x38},
 	{0x25, 0x04},
-	{0x28, 0xE1},
-	{0x29, 0x03},
+	{0x28, 0x21},
+	{0x29, 0x00},
 	{0x2C, 0x23},
 	{0x2D, 0x00},
 	{0x30, 0x0A},
@@ -503,32 +505,54 @@ static void sn65dsi83_enable(struct drm_bridge *bridge)
 		val |= REG_LVDS_FMT_LVDS_LINK_CFG;
 
 	regmap_write(ctx->regmap, REG_LVDS_FMT, val);
-	regmap_write(ctx->regmap, REG_LVDS_VCOM, 0x05);
-	regmap_write(ctx->regmap, REG_LVDS_LANE,
+	// set correct voltage swing for InnoLux, TODO: configure through DTS
+	//regmap_write(ctx->regmap, REG_LVDS_VCOM, 0x05);
+	regmap_write(ctx->regmap, REG_LVDS_VCOM, 0x0F);
+	// set 100ohm term for InnoLux, TODO: configure through DTS
+	// set reverse channel A LVDS, TODO: configure through DTS
+	/*regmap_write(ctx->regmap, REG_LVDS_LANE,
 		(ctx->lvds_dual_link_even_odd_swap ?
 		 REG_LVDS_LANE_EVEN_ODD_SWAP : 0) |
 		REG_LVDS_LANE_CHA_LVDS_TERM |
-		REG_LVDS_LANE_CHB_LVDS_TERM);
+		REG_LVDS_LANE_CHB_LVDS_TERM);*/
+	regmap_write(ctx->regmap, REG_LVDS_LANE,
+		(ctx->lvds_dual_link_even_odd_swap ?
+		 REG_LVDS_LANE_EVEN_ODD_SWAP : 0) |
+		 REG_LVDS_LANE_CHA_REVERSE_LVDS);
 	regmap_write(ctx->regmap, REG_LVDS_CM, 0x00);
 
+	// only single channel DSI is supported for now
 	regmap_bulk_write(ctx->regmap, REG_VID_CHA_ACTIVE_LINE_LENGTH_LOW,
-			  &ctx->mode.hdisplay, 2);
+			&ctx->mode.hdisplay, 2);
 	regmap_bulk_write(ctx->regmap, REG_VID_CHA_VERTICAL_DISPLAY_SIZE_LOW,
-			  &ctx->mode.vdisplay, 2);
+			&ctx->mode.vdisplay, 2);
+
 	val = 32 + 1;	/* 32 + 1 pixel clock to ensure proper operation */
 	regmap_bulk_write(ctx->regmap, REG_VID_CHA_SYNC_DELAY_LOW, &val, 2);
+
+	printk(KERN_ERR "TIM: %s: hsync_end %d hsync_start %d\n", __func__, ctx->mode.hsync_end, ctx->mode.hsync_start);
 	val = ctx->mode.hsync_end - ctx->mode.hsync_start;
 	regmap_bulk_write(ctx->regmap, REG_VID_CHA_HSYNC_PULSE_WIDTH_LOW,
 			  &val, 2);
+	
+	printk(KERN_ERR "TIM: %s: vsync_end %d vsync_start %d\n", __func__, ctx->mode.vsync_end, ctx->mode.vsync_start);
 	val = ctx->mode.vsync_end - ctx->mode.vsync_start;
 	regmap_bulk_write(ctx->regmap, REG_VID_CHA_VSYNC_PULSE_WIDTH_LOW,
 			  &val, 2);
+
+	printk(KERN_ERR "TIM: %s: htotal %d hsync_end %d\n", __func__, ctx->mode.htotal, ctx->mode.hsync_end);
 	regmap_write(ctx->regmap, REG_VID_CHA_HORIZONTAL_BACK_PORCH,
 		     ctx->mode.htotal - ctx->mode.hsync_end);
+	
+	printk(KERN_ERR "TIM: %s: vtotal %d vsync_end %d\n", __func__, ctx->mode.vtotal, ctx->mode.vsync_end);
 	regmap_write(ctx->regmap, REG_VID_CHA_VERTICAL_BACK_PORCH,
 		     ctx->mode.vtotal - ctx->mode.vsync_end);
+
+	printk(KERN_ERR "TIM: %s: hsync_start %d hdisplay %d\n", __func__, ctx->mode.hsync_start, ctx->mode.hdisplay);
 	regmap_write(ctx->regmap, REG_VID_CHA_HORIZONTAL_FRONT_PORCH,
 		     ctx->mode.hsync_start - ctx->mode.hdisplay);
+	
+	printk(KERN_ERR "TIM: %s: vsync_start %d vdisplay %d\n", __func__, ctx->mode.vsync_start, ctx->mode.vdisplay);
 	regmap_write(ctx->regmap, REG_VID_CHA_VERTICAL_FRONT_PORCH,
 		     ctx->mode.vsync_start - ctx->mode.vdisplay);
 	//enable test pattern
