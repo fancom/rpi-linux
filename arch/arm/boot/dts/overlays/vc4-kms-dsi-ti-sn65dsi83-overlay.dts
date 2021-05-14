@@ -101,6 +101,7 @@
 				ports {
 					port@0 {
 						reg = <0>;
+						dual-lvds-odd-pixels;
 						panel_in_lvds_channelA: endpoint {
 							remote-endpoint = <&bridge_out_channelA>;
 						};
@@ -108,6 +109,7 @@
 
 					port@1 {
 						reg = <1>;
+						dual-lvds-even-pixels;
 						panel_in_lvds_channelB: endpoint {
 							remote-endpoint = <&bridge_out_channelB>;
 						};
