@@ -440,6 +440,7 @@ static void dumpRegs(struct drm_bridge *bridge)
 {
 	struct sn65dsi83 *ctx = bridge_to_sn65dsi83(bridge);
 	unsigned int val;
+	int i;
 
 	for (i = 0; i < ARRAY_SIZE(sn65dsi65_reg_defaults); i++) {
 		struct reg_default conf = sn65dsi65_reg_defaults[i];
