@@ -534,7 +534,7 @@ static void sn65dsi83_enable(struct drm_bridge *bridge)
 	//regmap_write(ctx->regmap, REG_VID_CHA_TEST_PATTERN, 0x00);
 	regmap_write(ctx->regmap, REG_VID_CHA_TEST_PATTERN, 0x10);
 
-	dumpRegs();
+	dumpRegs(bridge);
 
 /*
 	printk(KERN_ERR "TIM: %s: sn65dsi65_reg_defaults\n", __func__);
