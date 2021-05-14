@@ -416,8 +416,8 @@ static u8 sn65dsi83_get_dsi_range(struct sn65dsi83 *ctx)
 	u8 dsiClk = DIV_ROUND_UP(clamp((unsigned int)ctx->mode.clock *
 			    mipi_dsi_pixel_format_to_bpp(ctx->dsi->format) /
 			    ctx->dsi_lanes / 2, 40000U, 500000U), 5000U);
-	printk(KERN_ERR "TIM: %s: set dsiClk to %d based on %ld, %d, %d\n",
-	       __func__, dsiClk, ctx->mode.clock, ctx->dsi->format, ctx->dsi_lanes);
+	printk(KERN_ERR "TIM: %s: set dsiClk between %d and %d Mhz based on %ld, %d, %d\n",
+	       __func__, dsiClk * 5, dsiClk * 6, ctx->mode.clock, ctx->dsi->format, ctx->dsi_lanes);
 	return dsiClk;
 }
 
@@ -431,7 +431,21 @@ static u8 sn65dsi83_get_dsi_div(struct sn65dsi83 *ctx)
 	if (!ctx->lvds_dual_link)
 		dsi_div /= 2;
 
+	printk(KERN_ERR "TIM: %s: set dsiDiv to %d based on %ld, %d, %d\n",
+	       __func__, dsi_div -1, ctx->dsi->format, ctx->dsi_lanes, ctx->lvds_dual_link);
 	return dsi_div - 1;
+}
+
+static void dumpRegs(struct drm_bridge *bridge)
+{
+	struct sn65dsi83 *ctx = bridge_to_sn65dsi83(bridge);
+	unsigned int val;
+
+	for (i = 0; i < ARRAY_SIZE(sn65dsi65_reg_defaults); i++) {
+		struct reg_default conf = sn65dsi65_reg_defaults[i];
+		regmap_read(ctx->regmap, conf.reg, &val);
+		printk(KERN_ERR "TIM: %s: reg 0x%02x val 0x%02x\n", __func__, conf.reg, val);
+	}
 }
 
 static void sn65dsi83_enable(struct drm_bridge *bridge)
@@ -516,8 +530,13 @@ static void sn65dsi83_enable(struct drm_bridge *bridge)
 		     ctx->mode.hsync_start - ctx->mode.hdisplay);
 	regmap_write(ctx->regmap, REG_VID_CHA_VERTICAL_FRONT_PORCH,
 		     ctx->mode.vsync_start - ctx->mode.vdisplay);
-	regmap_write(ctx->regmap, REG_VID_CHA_TEST_PATTERN, 0x00);
+	//enable test pattern
+	//regmap_write(ctx->regmap, REG_VID_CHA_TEST_PATTERN, 0x00);
+	regmap_write(ctx->regmap, REG_VID_CHA_TEST_PATTERN, 0x10);
 
+	dumpRegs();
+
+/*
 	printk(KERN_ERR "TIM: %s: sn65dsi65_reg_defaults\n", __func__);
 	for (i = 0; i < ARRAY_SIZE(sn65dsi65_reg_defaults); i++) {
 		struct reg_default conf = sn65dsi65_reg_defaults[i];
@@ -525,6 +544,7 @@ static void sn65dsi83_enable(struct drm_bridge *bridge)
 	}
 	printk(KERN_ERR "TIM: %s: written %d sn65dsi65_reg_defaults\n",
 	       __func__, i);
+*/
 
 	/* Enable PLL */
 	regmap_write(ctx->regmap, REG_RC_PLL_EN, REG_RC_PLL_EN_PLL_EN);
