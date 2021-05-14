@@ -391,8 +391,8 @@ static u8 sn65dsi83_get_lvds_range(struct sn65dsi83 *ctx)
 	 */
 	int mode_clock = ctx->mode.clock;
 
-	if (ctx->lvds_dual_link)
-		mode_clock /= 2;
+	/*if (ctx->lvds_dual_link)
+		mode_clock /= 2;*/
 
 	return (mode_clock - 12500) / 25000;
 }
@@ -413,9 +413,9 @@ static u8 sn65dsi83_get_dsi_range(struct sn65dsi83 *ctx)
 	 *  DSI_CLK = mode clock * bpp / dsi_data_lanes / 2
 	 * the 2 is there because the bus is DDR.
 	 */
-	u8 dsiClk = DIV_ROUND_UP(clamp((unsigned int)ctx->mode.clock *
-			    mipi_dsi_pixel_format_to_bpp(ctx->dsi->format) /
-			    ctx->dsi_lanes / 2, 40000U, 500000U), 5000U);
+	u8 dsiClk = DIV_ROUND_UP(clamp(((unsigned int)ctx->mode.clock *
+			    2 * mipi_dsi_pixel_format_to_bpp(ctx->dsi->format)) /
+			    (ctx->dsi_lanes * 2), 40000U, 500000U), 5000U);
 	printk(KERN_ERR "TIM: %s: set dsiClk between %d and %d Mhz based on %ld, %d, %d\n",
 	       __func__, dsiClk * 5, dsiClk * 6, ctx->mode.clock, ctx->dsi->format, ctx->dsi_lanes);
 	return dsiClk;
@@ -696,8 +696,8 @@ static int sn65dsi83_parse_dt(struct sn65dsi83 *ctx, enum sn65dsi83_model model)
 	printk(KERN_ERR "TIM: %s: found endpoint %s\n",
 	       __func__, endpoint->full_name ? endpoint->full_name: endpoint->name);
 
-	//ctx->dsi_lanes = of_property_read_u32(endpoint, "lvds-term");
-	ctx->lvds_termination = of_property_count_u32_elems(endpoint, "data-lanes");
+	//ctx->lvds_termination = of_property_read_u32(endpoint, "lvds-term");
+	ctx->dsi_lanes = of_property_count_u32_elems(endpoint, "data-lanes");
 	ctx->host_node = of_graph_get_remote_port_parent(endpoint);
 	of_node_put(endpoint);
 
