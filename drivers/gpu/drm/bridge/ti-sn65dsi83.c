@@ -698,7 +698,8 @@ static int sn65dsi83_parse_dt(struct sn65dsi83 *ctx, enum sn65dsi83_model model)
 	printk(KERN_ERR "TIM: %s: found endpoint %s\n",
 	       __func__, endpoint->full_name ? endpoint->full_name: endpoint->name);
 
-	ctx->dsi_lanes = of_property_count_u32_elems(endpoint, "data-lanes");
+	//ctx->dsi_lanes = of_property_read_u32(endpoint, "lvds-term");
+	ctx->lvds_termination = of_property_count_u32_elems(endpoint, "data-lanes");
 	ctx->host_node = of_graph_get_remote_port_parent(endpoint);
 	of_node_put(endpoint);
 
