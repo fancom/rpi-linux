@@ -80,12 +80,16 @@
 				data-mapping = "vesa-24";
 
 				panel-timing {
-					clock-frequency = <70930000>;
+					/* clock frequency of 70.93Mhz in the datasheet is for single LVDS channel */
+					/* since we use dual LVDS channel, the clock frequency is 2*70.93Mhz */
+					/* the bridge driver will correct this */
+					clock-frequency = <141860000>;
 
-					hactive = <1920>;
-					hsync-len = <70>;
-					hfront-porch = <70>;
-					hback-porch = <70>;
+					/* the hactive and porches are for a single LVDS channel */
+					hactive = <960>;
+					hsync-len = <35>;
+					hfront-porch = <35>;
+					hback-porch = <35>;
 
 					vactive = <1080>;
 					vsync-len = <10>;
