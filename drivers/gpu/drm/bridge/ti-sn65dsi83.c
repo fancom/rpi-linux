@@ -114,6 +114,10 @@
 #define REG_VID_CHA_HORIZONTAL_FRONT_PORCH	0x38
 #define REG_VID_CHA_VERTICAL_FRONT_PORCH	0x3a
 #define REG_VID_CHA_TEST_PATTERN		0x3c
+/* sn65dsi85 only */
+#define REG_VID_RIGHT_CROP              0x3d
+#define REG_VID_LEFT_CROP               0x3e
+
 /* IRQ registers */
 #define REG_IRQ_GLOBAL				0xe0
 #define  REG_IRQ_GLOBAL_IRQ_EN			BIT(0)
@@ -553,32 +557,48 @@ static void sn65dsi83_enable(struct drm_bridge *bridge)
 
 	printk(KERN_ERR "TIM: %s: hsync_end %d hsync_start %d\n", __func__, ctx->mode.hsync_end, ctx->mode.hsync_start);
 	val = ctx->mode.hsync_end - ctx->mode.hsync_start;
+	if (ctx->lvds_dual_link)
+		val /= 2;
 	regmap_bulk_write(ctx->regmap, REG_VID_CHA_HSYNC_PULSE_WIDTH_LOW,
 			  &val, 2);
 	
 	printk(KERN_ERR "TIM: %s: vsync_end %d vsync_start %d\n", __func__, ctx->mode.vsync_end, ctx->mode.vsync_start);
 	val = ctx->mode.vsync_end - ctx->mode.vsync_start;
+	if (ctx->lvds_dual_link)
+		val /= 2;
 	regmap_bulk_write(ctx->regmap, REG_VID_CHA_VSYNC_PULSE_WIDTH_LOW,
 			  &val, 2);
 
 	printk(KERN_ERR "TIM: %s: htotal %d hsync_end %d\n", __func__, ctx->mode.htotal, ctx->mode.hsync_end);
+	val = ctx->mode.htotal - ctx->mode.hsync_end;
+	if (ctx->lvds_dual_link)
+		val /= 2;
 	regmap_write(ctx->regmap, REG_VID_CHA_HORIZONTAL_BACK_PORCH,
-		     ctx->mode.htotal - ctx->mode.hsync_end);
+		     val);
 	
 	printk(KERN_ERR "TIM: %s: vtotal %d vsync_end %d\n", __func__, ctx->mode.vtotal, ctx->mode.vsync_end);
+	val = ctx->mode.vtotal - ctx->mode.vsync_end;
+	if (ctx->lvds_dual_link)
+		val /= 2;
 	regmap_write(ctx->regmap, REG_VID_CHA_VERTICAL_BACK_PORCH,
-		     ctx->mode.vtotal - ctx->mode.vsync_end);
+		     val);
 
 	printk(KERN_ERR "TIM: %s: hsync_start %d hdisplay %d\n", __func__, ctx->mode.hsync_start, ctx->mode.hdisplay);
+	val = ctx->mode.hsync_start - ctx->mode.hdisplay;
+	if (ctx->lvds_dual_link)
+		val /= 2;
 	regmap_write(ctx->regmap, REG_VID_CHA_HORIZONTAL_FRONT_PORCH,
-		     ctx->mode.hsync_start - ctx->mode.hdisplay);
+		     val);
 	
 	printk(KERN_ERR "TIM: %s: vsync_start %d vdisplay %d\n", __func__, ctx->mode.vsync_start, ctx->mode.vdisplay);
+	val = ctx->mode.vsync_start - ctx->mode.vdisplay;
+	if (ctx->lvds_dual_link)
+		val /= 2;
 	regmap_write(ctx->regmap, REG_VID_CHA_VERTICAL_FRONT_PORCH,
-		     ctx->mode.vsync_start - ctx->mode.vdisplay);
+		     val);
 	//enable test pattern
-	//regmap_write(ctx->regmap, REG_VID_CHA_TEST_PATTERN, 0x00);
-	regmap_write(ctx->regmap, REG_VID_CHA_TEST_PATTERN, 0x10);
+	regmap_write(ctx->regmap, REG_VID_CHA_TEST_PATTERN, 0x00);
+	//regmap_write(ctx->regmap, REG_VID_CHA_TEST_PATTERN, 0x10);
 
 	dumpRegs(bridge);
 
