@@ -541,8 +541,11 @@ static void sn65dsi83_enable(struct drm_bridge *bridge)
 	regmap_write(ctx->regmap, REG_LVDS_CM, 0x00);
 
 	// only single channel DSI is supported for now
+	val = ctx->mode.hdisplay;
+	if (ctx->lvds_dual_link)
+		val /= 2;
 	regmap_bulk_write(ctx->regmap, REG_VID_CHA_ACTIVE_LINE_LENGTH_LOW,
-			&ctx->mode.hdisplay, 2);
+			&val, 2);
 	regmap_bulk_write(ctx->regmap, REG_VID_CHA_VERTICAL_DISPLAY_SIZE_LOW,
 			&ctx->mode.vdisplay, 2);
 
@@ -559,7 +562,7 @@ static void sn65dsi83_enable(struct drm_bridge *bridge)
 	printk(KERN_ERR "TIM: %s: vsync_end %d vsync_start %d\n", __func__, ctx->mode.vsync_end, ctx->mode.vsync_start);
 	val = ctx->mode.vsync_end - ctx->mode.vsync_start;
 	if (ctx->lvds_dual_link)
-		val /= 2;
+		val *= 2;
 	regmap_bulk_write(ctx->regmap, REG_VID_CHA_VSYNC_PULSE_WIDTH_LOW,
 			  &val, 2);
 
@@ -573,7 +576,7 @@ static void sn65dsi83_enable(struct drm_bridge *bridge)
 	printk(KERN_ERR "TIM: %s: vtotal %d vsync_end %d\n", __func__, ctx->mode.vtotal, ctx->mode.vsync_end);
 	val = ctx->mode.vtotal - ctx->mode.vsync_end;
 	if (ctx->lvds_dual_link)
-		val /= 2;
+		val *= 2;
 	regmap_write(ctx->regmap, REG_VID_CHA_VERTICAL_BACK_PORCH,
 		     val);
 
@@ -587,7 +590,7 @@ static void sn65dsi83_enable(struct drm_bridge *bridge)
 	printk(KERN_ERR "TIM: %s: vsync_start %d vdisplay %d\n", __func__, ctx->mode.vsync_start, ctx->mode.vdisplay);
 	val = ctx->mode.vsync_start - ctx->mode.vdisplay;
 	if (ctx->lvds_dual_link)
-		val /= 2;
+		val *= 2;
 	regmap_write(ctx->regmap, REG_VID_CHA_VERTICAL_FRONT_PORCH,
 		     val);
 	//enable test pattern
