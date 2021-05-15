@@ -1,6 +1,6 @@
 #define MODE_HACK
 //#define HARDCODED_REGS
-//#define SN65DSI83_TEST_PATTERN
+#define SN65DSI83_TEST_PATTERN
 
 // SPDX-License-Identifier: GPL-2.0
 /*
@@ -434,12 +434,6 @@ static u8 sn65dsi83_get_dsi_range(struct sn65dsi83 *ctx)
 	 * the 2 is there because the bus is DDR.
 	 */
 
-	/* the dsi clock depends on the single or dual DSI input mode
-	   when the DSI input is single, the DSI clock is calculated by
-	   DSI_CLK = 2 * mode clock * bpp / (dsi_data_lanes * 2)
-	   when the DSI input is dual, the DSI clock is calculated by
-	   DSI_CLK = mode clock * bpp / (dsi_data_lanes * 2)*/
-	//TODO: handle nicely here
 	u8 dsiClk = DIV_ROUND_UP(clamp(((unsigned int)ctx->mode.clock *
 			    mipi_dsi_pixel_format_to_bpp(ctx->dsi->format)) /
 			    (ctx->dsi_lanes * 2), 40000U, 500000U), 5000U);
@@ -597,8 +591,11 @@ static void sn65dsi83_enable(struct drm_bridge *bridge)
 	regmap_write(ctx->regmap, REG_VID_CHA_VERTICAL_FRONT_PORCH,
 		     val);
 	//enable test pattern
+#ifndef SN65DSI83_TEST_PATTERN
 	regmap_write(ctx->regmap, REG_VID_CHA_TEST_PATTERN, 0x00);
-	//regmap_write(ctx->regmap, REG_VID_CHA_TEST_PATTERN, 0x10);
+#else
+	regmap_write(ctx->regmap, REG_VID_CHA_TEST_PATTERN, 0x10);
+#endif
 
 	dumpRegs(bridge);
 
