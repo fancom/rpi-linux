@@ -849,6 +849,10 @@ static bool vc4_dsi_encoder_mode_fixup(struct drm_encoder *encoder,
 	unsigned long pll_clock = pixel_clock_hz * dsi->divider;
 	int divider;
 
+	printk(KERN_ERR "TIM: %s: BEFORE pixel_clock_hz %lu, divider %u, pll_clock %lu\n",
+	       __func__, pixel_clock_hz, dsi->divider, pll_clock);
+	printk(KERN_ERR "TIM: %s: parent_rate %lu\n",
+	       __func__, parent_rate);
 	/* Find what divider gets us a faster clock than the requested
 	 * pixel clock.
 	 */
@@ -866,6 +870,10 @@ static bool vc4_dsi_encoder_mode_fixup(struct drm_encoder *encoder,
 	pixel_clock_hz = pll_clock / dsi->divider;
 
 	adjusted_mode->clock = pixel_clock_hz / 1000;
+	printk(KERN_ERR "TIM: %s: AFTER pixel_clock_hz %lu, divider %u, pll_clock %lu\n",
+	       __func__, pixel_clock_hz, dsi->divider, pll_clock);
+	printk(KERN_ERR "TIM: %s: adjusted_mode->clock %lu\n",
+	       __func__, adjusted_mode->clock);
 
 	/* Given the new pixel clock, adjust HFP to keep vrefresh the same. */
 	adjusted_mode->htotal = adjusted_mode->clock * mode->htotal /

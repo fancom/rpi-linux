@@ -85,11 +85,12 @@
 					/* the bridge driver will correct this */
 					clock-frequency = <141860000>;
 
-					/* the hactive and porches are for a single LVDS channel */
-					hactive = <960>;
-					hsync-len = <35>;
-					hfront-porch = <35>;
-					hback-porch = <35>;
+					/* the hactive and porches in the datasheet are for a single LVDS channel */
+					/* since we use dual LVDS channel, double everything */
+					hactive = <1920>;
+					hsync-len = <70>;
+					hfront-porch = <70>;
+					hback-porch = <70>;
 
 					vactive = <1080>;
 					vsync-len = <10>;
