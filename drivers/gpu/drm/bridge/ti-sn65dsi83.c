@@ -1,5 +1,5 @@
 #define MODE_HACK
-//#define HARDCODED_REGS
+#define HARDCODED_REGS
 #define SN65DSI83_TEST_PATTERN
 
 // SPDX-License-Identifier: GPL-2.0
@@ -253,11 +253,11 @@ static const struct reg_default sn65dsi65_reg_defaults[] = {
 
 	/* Core */
 	{0x0A, 0x05},//ok
-	{0x0B, 0x28},//ok
+	{0x0B, 0x38},//ok
 	{0x0D, 0x00},//ok
-	{0x10, 0x26},//ok
+	{0x10, 0x28},//ok
 	{0x11, 0x00},//ok
-	{0x12, 0x4B},//ok
+	{0x12, 0x64},//ok
 	{0x13, 0x00},//ok
 	{0x18, 0x6C},//ok
 	{0x19, 0x0F},//ok
