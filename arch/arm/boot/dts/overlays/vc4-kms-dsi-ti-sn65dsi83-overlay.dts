@@ -222,6 +222,12 @@
 			status = "okay";
 		};
 	};
+	fragment@22 {
+		target = <&v3d>;
+		__overlay__ {
+			status = "okay";
+		};
+	};
 	fragment@23 {
 		target = <&clocks>;
 		__overlay__ {
