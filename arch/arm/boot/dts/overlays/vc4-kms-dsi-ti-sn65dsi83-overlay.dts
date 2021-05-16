@@ -288,4 +288,11 @@
 			status = "okay";
 		};
 	};
+
+	fragment@31 {
+		target = <&fb>;
+		__overlay__  {
+			status = "okay";
+		};
+	};
 };
