@@ -309,6 +309,8 @@ static const struct reg_default sn65dsi65_reg_defaults[] = {
 #ifdef SN65DSI83_TEST_PATTERN
 	/* Test */
 	{0x3C, 0x10},
+#else
+	{0x3C, 0x00},
 #endif
 };
 
@@ -382,6 +384,10 @@ static void sn65dsi83_pre_enable(struct drm_bridge *bridge)
 	usleep_range(10000, 11000);
 	gpiod_set_value(ctx->enable_gpio, 1);
 	usleep_range(1000, 1100);
+
+	/* disable PLL, should already be the case after toggle of enable pin */
+	regmap_write(ctx->regmap, REG_RC_PLL_EN, 0x00);
+	regmap_write(ctx->regmap, REG_RC_RESET, 0x00);
 
 #ifdef MODE_HACK
 	/* TODO: hack until mode_set and mode_valid are called */
@@ -476,10 +482,6 @@ static void sn65dsi83_enable(struct drm_bridge *bridge)
 	unsigned int pval;
 	u16 val;
 	int ret, i;
-
-	/* Clear reset, disable PLL */
-	regmap_write(ctx->regmap, REG_RC_RESET, 0x00);
-	regmap_write(ctx->regmap, REG_RC_PLL_EN, 0x00);
 
 	/* Reference clock derived from DSI link clock. */
 	regmap_write(ctx->regmap, REG_RC_LVDS_PLL,
