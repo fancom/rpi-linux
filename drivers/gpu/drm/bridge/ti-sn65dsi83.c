@@ -544,8 +544,6 @@ static void sn65dsi83_enable(struct drm_bridge *bridge)
 
 	// only single channel DSI is supported for now
 	val = ctx->mode.hdisplay;
-	if (ctx->lvds_dual_link)
-		val /= 2;
 	regmap_bulk_write(ctx->regmap, REG_VID_CHA_ACTIVE_LINE_LENGTH_LOW,
 			&val, 2);
 	regmap_bulk_write(ctx->regmap, REG_VID_CHA_VERTICAL_DISPLAY_SIZE_LOW,
