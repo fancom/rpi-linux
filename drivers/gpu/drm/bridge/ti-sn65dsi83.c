@@ -1,6 +1,6 @@
 #define MODE_HACK
 //#define HARDCODED_REGS
-#define SN65DSI83_TEST_PATTERN
+//#define SN65DSI83_TEST_PATTERN
 
 // SPDX-License-Identifier: GPL-2.0
 /*
