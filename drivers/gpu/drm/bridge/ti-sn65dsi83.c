@@ -1,6 +1,6 @@
 #define MODE_HACK
 //#define HARDCODED_REGS
-#define SN65DSI83_TEST_PATTERN
+//#define SN65DSI83_TEST_PATTERN
 
 // SPDX-License-Identifier: GPL-2.0
 /*
@@ -527,8 +527,8 @@ static void sn65dsi83_enable(struct drm_bridge *bridge)
 	// set correct voltage swing for InnoLux, TODO: configure through DTS
 	//regmap_write(ctx->regmap, REG_LVDS_VCOM, 0x05);
 	regmap_write(ctx->regmap, REG_LVDS_VCOM, 0x0F);
-	// set 100ohm term for InnoLux, TODO: configure through DTS
-	// set reverse channel A LVDS, TODO: configure through DTS
+	// set 100ohm term for InnoLux, TODO: configure through DTS, using 200hm as default and optionally adding '100-ohm-termination;'
+	// set reverse channel A LVDS, TODO: configure through DTS, using non-reverse as default and optionally adding 'reverse-channel-A;' and/or 'reverse-channel-B;'
 	/*regmap_write(ctx->regmap, REG_LVDS_LANE,
 		(ctx->lvds_dual_link_even_odd_swap ?
 		 REG_LVDS_LANE_EVEN_ODD_SWAP : 0) |
