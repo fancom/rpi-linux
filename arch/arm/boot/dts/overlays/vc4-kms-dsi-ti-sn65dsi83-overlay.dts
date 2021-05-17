@@ -83,10 +83,12 @@
 					/* clock frequency of 70.93Mhz in the datasheet is for single LVDS channel */
 					/* since we use dual LVDS channel, the clock frequency is 2*70.93Mhz */
 					/* the bridge driver will correct this */
-					/* vc4_dsi.c: however, the dsi parent_rate is 3Ghz and the dsi-divider is fixed to 6 */
-					/* (3Ghz / 3)/6 = 166.666Mhz. (166.666Mhz * 24bpp) / 2*#lanes = 500Mhz DSI clock */
-					/* (3Ghz / 4)/6 = 125Mhz. (125Mhz * 24bpp) / 2*#lanes = 375Mhz DSI clock */
-					/* we'll choose for the 375Mhz DSI clock, with a divider of 6 in the bridge, resulting in 62.5Mhz */
+					/* vc4_dsi.c: however, the dsi parent_rate is 3Ghz and the dsi-divider is fixed to (24/#nr-data lanes) */
+					/* (3Ghz / 3)/7 = 142.86Mhz. (142.86Mhz * 24bpp) / 8 = 571Mhz DSI clock */
+					/* (3Ghz / 4)/7 = 107.14Mhz. (107.14Mhz * 24bpp) / 8 = 428.57Mhz DSI clock */
+					/* minimum required DSI clock is (48bits/(3 lanes * 2)) * 60Mhz = 480Mhz
+					/* we'll hence need a 571Mhz capped to 500Mhz DSI clock, with a divider of 8 in the bridge, resulting in 62.5Mhz */
+					/* 62.5Mhz * 2 = 125Mhz */
 					clock-frequency = <125000000>;
 
 					/* the hactive and porches in the datasheet are for a single LVDS channel */
