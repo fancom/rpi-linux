@@ -230,8 +230,6 @@ static struct drm_crtc *vc4_drv_find_crtc(struct drm_device *drm,
 					  struct drm_encoder *encoder)
 {
 	struct drm_crtc *crtc;
-	printk(KERN_ERR "TIM: %s: hweight32(encoder->possible_crtcs)=%d\n"
-	       , __func__, hweight32(encoder->possible_crtcs));
 	if (WARN_ON(hweight32(encoder->possible_crtcs) != 1))
 		return NULL;
 

@@ -67,8 +67,7 @@
 			};
 
 			panel: panel {
-				compatible = "innolux,g156hce-l01", "panel-lvds";
-				label = "TIM: fancom display";
+				compatible = "panel-lvds";
 				status = "okay";
 
 				backlight = <&backlight_lvds>;

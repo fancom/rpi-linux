@@ -489,9 +489,6 @@ static void panel_simple_parse_panel_timing_node(struct device *dev,
 		if (ot->flags != dt->flags)
 			continue;
 
-		printk(KERN_ERR "TIM: %s: %dx%d@%d\n"
-		       , __func__, dt->hactive.typ, dt->vactive.typ, dt->pixelclock.typ);
-
 		videomode_from_timing(ot, &vm);
 		drm_display_mode_from_videomode(&vm, &panel->override_mode);
 		panel->override_mode.type |= DRM_MODE_TYPE_DRIVER |
@@ -501,7 +498,6 @@ static void panel_simple_parse_panel_timing_node(struct device *dev,
 
 	if (WARN_ON(!panel->override_mode.type))
 		dev_err(dev, "Reject override mode: No display_timing found\n");
-	printk(KERN_ERR "TIM: %s: Panel timing registerd?\n", __func__);
 }
 
 static int panel_simple_probe(struct device *dev, const struct panel_desc *desc)
@@ -512,8 +508,6 @@ static int panel_simple_probe(struct device *dev, const struct panel_desc *desc)
 	int connector_type;
 	u32 bus_flags;
 	int err;
-
-	printk(KERN_ERR "TIM: %s: init\n", __func__);
 
 	panel = devm_kzalloc(dev, sizeof(*panel), GFP_KERNEL);
 	if (!panel)
@@ -565,8 +559,6 @@ static int panel_simple_probe(struct device *dev, const struct panel_desc *desc)
 			goto free_ddc;
 	} else {
 		if (!of_get_display_timing(dev->of_node, "panel-timing", &dt)) {
-			printk(KERN_ERR "TIM: %s: no panel timing in %s. call to panel_simple_parse_panel_timing_node\n"
-			       , __func__, dev->of_node->full_name);
 			panel_simple_parse_panel_timing_node(dev, panel, &dt);
 		}
 	}
@@ -637,12 +629,9 @@ static int panel_simple_probe(struct device *dev, const struct panel_desc *desc)
 
 	dev_set_drvdata(dev, panel);
 
-	printk(KERN_ERR "TIM: %s: exit\n", __func__);
-
 	return 0;
 
 free_ddc:
-	printk(KERN_ERR "TIM: %s: exit (error)\n", __func__);
 	if (panel->ddc)
 		put_device(&panel->ddc->dev);
 
@@ -4415,8 +4404,6 @@ MODULE_DEVICE_TABLE(of, platform_of_match);
 static int panel_simple_platform_probe(struct platform_device *pdev)
 {
 	const struct of_device_id *id;
-
-	printk(KERN_ERR "TIM: %s: init\n", __func__);
 
 	id = of_match_node(platform_of_match, pdev->dev.of_node);
 	if (!id)
