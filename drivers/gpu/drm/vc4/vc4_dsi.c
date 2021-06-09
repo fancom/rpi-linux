@@ -1,3 +1,5 @@
+//#define VERBOSE
+
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (C) 2016 Broadcom
@@ -848,11 +850,12 @@ static bool vc4_dsi_encoder_mode_fixup(struct drm_encoder *encoder,
 	unsigned long pixel_clock_hz = mode->clock * 1000;
 	unsigned long pll_clock = pixel_clock_hz * dsi->divider;
 	int divider;
-
-	printk(KERN_ERR "TIM: %s: BEFORE pixel_clock_hz %lu, divider %u, pll_clock %lu\n",
+#ifdef VERBOSE
+	printk(KERN_ERR "VC4_DSI: %s: BEFORE pixel_clock_hz %lu, divider %u, pll_clock %lu\n",
 	       __func__, pixel_clock_hz, dsi->divider, pll_clock);
-	printk(KERN_ERR "TIM: %s: parent_rate %lu\n",
+	printk(KERN_ERR "VC4_DSI: %s: parent_rate %lu\n",
 	       __func__, parent_rate);
+#endif
 	/* Find what divider gets us a faster clock than the requested
 	 * pixel clock.
 	 */
@@ -870,10 +873,12 @@ static bool vc4_dsi_encoder_mode_fixup(struct drm_encoder *encoder,
 	pixel_clock_hz = pll_clock / dsi->divider;
 
 	adjusted_mode->clock = pixel_clock_hz / 1000;
-	printk(KERN_ERR "TIM: %s: AFTER pixel_clock_hz %lu, divider %u, pll_clock %lu\n",
+#ifdef VERBOSE
+	printk(KERN_ERR "VC4_DSI: %s: AFTER pixel_clock_hz %lu, divider %u, pll_clock %lu\n",
 	       __func__, pixel_clock_hz, dsi->divider, pll_clock);
-	printk(KERN_ERR "TIM: %s: adjusted_mode->clock %lu\n",
+	printk(KERN_ERR "VC4_DSI: %s: adjusted_mode->clock %lu\n",
 	       __func__, adjusted_mode->clock);
+#endif
 
 	/* Given the new pixel clock, adjust HFP to keep vrefresh the same. */
 	adjusted_mode->htotal = adjusted_mode->clock * mode->htotal /
@@ -902,7 +907,9 @@ static void vc4_dsi_encoder_enable(struct drm_encoder *encoder)
 	u32 disp0_ctrl;
 	int ret;
 
-	printk(KERN_ERR "TIM: %s: init\n", __func__);
+#ifdef VERBOSE
+	printk(KERN_ERR "VC4_DSI: %s: init\n", __func__);
+#endif
 
 	ret = pm_runtime_get_sync(dev);
 	if (ret) {
@@ -920,15 +927,19 @@ static void vc4_dsi_encoder_enable(struct drm_encoder *encoder)
 	 * PLLD_DSI1 is an integer divider and its rate selection will
 	 * never round up.
 	 */
-	printk(KERN_ERR "TIM: %s: pixel_clock_hz %lu, divider %u\n",
+#ifdef VERBOSE
+	printk(KERN_ERR "VC4_DSI: %s: pixel_clock_hz %lu, divider %u\n",
 	       __func__, pixel_clock_hz, dsi->divider);
+#endif
 	phy_clock = (pixel_clock_hz + 1000) * dsi->divider;
 	ret = clk_set_rate(dsi->pll_phy_clock, phy_clock);
 	if (ret) {
 		dev_err(&dsi->pdev->dev,
 			"Failed to set phy clock to %ld: %d\n", phy_clock, ret);
 	}
-	printk(KERN_ERR "TIM: %s: pll_phy_clock is now %lu\n", __func__, phy_clock);
+#ifdef VERBOSE
+	printk(KERN_ERR "VC4_DSI: %s: pll_phy_clock is now %lu\n", __func__, phy_clock);
+#endif
 
 	/* Reset the DSI and all its fifos. */
 	DSI_PORT_WRITE(CTRL,
@@ -989,7 +1000,9 @@ static void vc4_dsi_encoder_enable(struct drm_encoder *encoder)
 	}
 
 	ret = clk_prepare_enable(dsi->escape_clock);
-	printk(KERN_ERR "TIM: %s: escape_clock %lu\n", __func__, clk_get_rate(dsi->escape_clock));
+#ifdef VERBOSE
+	printk(KERN_ERR "VC4_DSI: %s: escape_clock %lu\n", __func__, clk_get_rate(dsi->escape_clock));
+#endif
 	if (ret) {
 		DRM_ERROR("Failed to turn on DSI escape clock: %d\n", ret);
 		return;
@@ -1002,7 +1015,9 @@ static void vc4_dsi_encoder_enable(struct drm_encoder *encoder)
 	}
 
 	hs_clock = clk_get_rate(dsi->pll_phy_clock);
-	printk(KERN_ERR "TIM: %s: hs_clock %ld\n", __func__, hs_clock);
+#ifdef VERBOSE
+	printk(KERN_ERR "VC4_DSI: %s: hs_clock %ld\n", __func__, hs_clock);
+#endif
 
 	/* Yes, we set the DSI0P/DSI1P pixel clock to the byte rate,
 	 * not the pixel clock rate.  DSIxP take from the APHY's byte,
@@ -1018,7 +1033,9 @@ static void vc4_dsi_encoder_enable(struct drm_encoder *encoder)
 			dsip_clock, ret);
 	}
 
-	printk(KERN_ERR "TIM: %s: pixel_clock %lu\n", __func__, clk_get_rate(dsi->pixel_clock));
+#ifdef VERBOSE
+	printk(KERN_ERR "VC4_DSI: %s: pixel_clock %lu\n", __func__, clk_get_rate(dsi->pixel_clock));
+#endif
 	ret = clk_prepare_enable(dsi->pixel_clock);
 	if (ret) {
 		DRM_ERROR("Failed to turn on DSI pixel clock: %d\n", ret);
@@ -1161,7 +1178,9 @@ static void vc4_dsi_encoder_enable(struct drm_encoder *encoder)
 		drm_print_regset32(&p, &dsi->regset);
 	}
 
-	printk(KERN_ERR "TIM: %s: exit\n", __func__);
+#ifdef VERBOSE
+	printk(KERN_ERR "VC4_DSI: %s: exit\n", __func__);
+#endif
 }
 
 static ssize_t vc4_dsi_host_transfer(struct mipi_dsi_host *host,
@@ -1574,7 +1593,9 @@ static int vc4_dsi_bind(struct device *dev, struct device *master, void *data)
 	dma_cap_mask_t dma_mask;
 	int ret;
 
-	printk(KERN_ERR "TIM: %s: init\n", __func__);
+#ifdef VERBOSE
+	printk(KERN_ERR "VC4_DSI: %s: init\n", __func__);
+#endif
 
 	match = of_match_device(vc4_dsi_dt_match, dev);
 	if (!match)
@@ -1736,7 +1757,9 @@ static int vc4_dsi_bind(struct device *dev, struct device *master, void *data)
 
 	pm_runtime_enable(dev);
 
-	printk(KERN_ERR "TIM: %s: exit\n", __func__);
+#ifdef VERBOSE
+	printk(KERN_ERR "VC4_DSI: %s: exit\n", __func__);
+#endif
 
 	return 0;
 }
