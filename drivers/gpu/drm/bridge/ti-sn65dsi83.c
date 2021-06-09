@@ -375,7 +375,9 @@ err_dsi_attach:
 static void sn65dsi83_pre_enable(struct drm_bridge *bridge)
 {
 	struct sn65dsi83 *ctx = bridge_to_sn65dsi83(bridge);
-
+#ifdef MODE_HACK
+	struct drm_display_mode *adjusted_mode;
+#endif
 	/*
 	 * Reset the chip, pull EN line low for t_reset=10ms,
 	 * then high for t_en=1ms.
@@ -392,8 +394,7 @@ static void sn65dsi83_pre_enable(struct drm_bridge *bridge)
 
 #ifdef MODE_HACK
 	/* TODO: hack until mode_set and mode_valid are called */
-	struct drm_display_mode *adjusted_mode =
-		&(bridge->encoder->crtc->state->adjusted_mode);
+	adjusted_mode = &(bridge->encoder->crtc->state->adjusted_mode);
 	sn65dsi83_mode_set(bridge, &ctx->mode, adjusted_mode);
 	ctx->lvds_format_24bpp = true;
 	ctx->lvds_format_jeida = false;
@@ -488,7 +489,7 @@ static void sn65dsi83_enable(struct drm_bridge *bridge)
 	struct sn65dsi83 *ctx = bridge_to_sn65dsi83(bridge);
 	unsigned int pval;
 	u16 val;
-	int ret, i;
+	int ret;
 
 	/* Reference clock derived from DSI link clock. */
 	regmap_write(ctx->regmap, REG_RC_LVDS_PLL,
@@ -633,7 +634,7 @@ static void sn65dsi83_enable(struct drm_bridge *bridge)
 	/* Enable PLL */
 	regmap_write(ctx->regmap, REG_RC_PLL_EN, REG_RC_PLL_EN_PLL_EN);
 	usleep_range(3000, 4000);
-	ret = regmap_read_poll_DSI_BRIDGEeout(ctx->regmap, REG_RC_LVDS_PLL, pval,
+	ret = regmap_read_poll_timeout(ctx->regmap, REG_RC_LVDS_PLL, pval,
 					pval & REG_RC_LVDS_PLL_PLL_EN_STAT,
 					1000, 100000);
 	if (ret) {
