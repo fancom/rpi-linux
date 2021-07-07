@@ -1,0 +1,134 @@
+/*
+ * vc4-kms-dsi-sn65dsi8x-overlay.dts
+ */
+
+/dts-v1/;
+/plugin/;
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/pinctrl/bcm2835.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/clock/bcm2835.h>
+
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/leds/common.h>
+
+#include <uapi/linux/input-event-codes.h> // KEY_RED, etc
+
+#include "cma-overlay.dts"
+
+/ {
+	compatible = "brcm,bcm2835";
+
+	fragment@0 { /* Debug port */
+		target = <&uart1_pins>;
+		__overlay__ {
+			brcm,pins = <14 15>; /* pin 51, 55 */
+			brcm,function = <BCM2835_FSEL_ALT0>;
+			brcm,pull = <0 2>;
+		};
+	};
+
+	fragment@1 { /* Debug port */
+		target = <&uart1>;
+		__overlay__ {
+			status = "okay";
+			pinctrl-names = "default";
+			pinctrl-0 = <&uart1_pins>;
+		};
+	};
+
+
+	/* Fixes because RPI does stupid stuff. */
+	fragment@2 {
+		target = <&phy1>;
+		__overlay__ {
+			reg = <0>;
+		};
+	};
+
+	fragment@3 {
+		target = <&i2c0>;
+		__overlay__ {
+			status = "okay";
+			pcf8523@68 {
+				compatible = "nxp,pcf8523";
+				reg = <0x68>;
+				quartz-load-femtofarads = <7000>; /* in femto Farad (fF) */
+				interrupt = <SPI_GIC 53 IRQ_TYPE_LEVEL_HIGH>; // gpio6, int = "or of all i2c".
+			};
+		};
+	};
+
+	fragment@4 {
+		target = <&pcie0>; // PCIE2?
+		__overlay__ {
+			pci@2,0 {
+				// PCIe NVMe SSD M.2 slot, but how?
+
+				/*
+				 * https://en.wikipedia.org/wiki/M.2
+				 * https://forums.developer.nvidia.com/t/installing-nvme-drive/49957
+				 * https://community.nxp.com/t5/i-MX-Processors/IMX7D-PCIE-Support/td-p/810018
+				 */
+			};
+		};
+	};
+
+	fragment@5 {
+		target-path = "/"; // = <&gpio>;
+		__overlay__ {
+			leds_rgb {
+				compatible = "gpio-leds"; /* See leds-gpio.yaml */
+				led_red {
+					gpios = <&gpio 24 GPIO_ACTIVE_LOW>; /* pin 45 */
+					color = <LED_COLOR_ID_RED>;
+					default-state = "off";
+				};
+
+
+				led_green {
+					gpios = <&gpio 22 GPIO_ACTIVE_LOW>; /* pin 46 */
+					color = <LED_COLOR_ID_GREEN>;
+					default-state = "off";
+				};
+
+				led_blue {
+					gpios = <&gpio 23 GPIO_ACTIVE_LOW>; /* pin 47 */
+					color = <LED_COLOR_ID_BLUE>;
+					default-state = "off";
+				};
+			};
+
+			gpio-keys {
+				compatible = "gpio-keys";
+				autorepeat; //The autorepeat property allows holding the key to continuously generate events.
+				restore {
+					label = "restore";
+					gpios = <&gpio 7 GPIO_ACTIVE_HIGH>; //input
+					linux,code = <KEY_RED>; // 0x18e
+				};
+
+				pewake {
+					label = "nvm_wakeup";
+					gpios = <&gpio 8 GPIO_ACTIVE_HIGH>; //output
+					linux,code = <KEY_GREEN>; // 0x18f
+				};
+
+				rtc_int {
+					label = "rtc_interrupt";
+					gpios = <&gpio 6 GPIO_ACTIVE_HIGH>; //input
+					linux,code =  <KEY_GREEN>; // 0x18f
+				};
+
+				lan_rst {
+					label = "lan_reset";
+					gpios = <&gpio 6 GPIO_ACTIVE_HIGH>; //input
+					linux,code = <KEY_BLUE>; // 0x191
+				};
+
+			};
+		};
+	};
+};
+
+
