@@ -19,7 +19,19 @@
 / {
 	compatible = "brcm,bcm2835";
 
-	fragment@0 { /* Debug port */
+	fragment@0 {
+		target = <&gpio>;
+		__overlay__ {
+			i2c0_pins: i2c0 {
+				brcm,pins = <44 45>;
+				brcm,function = <BCM2835_FSEL_ALT2>;
+				brcm,pull = <BCM2835_PUD_UP>;
+			};
+
+		};
+	};
+
+	fragment@1 { /* Debug port */
 		target = <&uart1_pins>;
 		__overlay__ {
 			brcm,pins = <14 15>; /* pin 51, 55 */
@@ -28,7 +40,7 @@
 		};
 	};
 
-	fragment@1 { /* Debug port */
+	fragment@2 { /* Debug port */
 		target = <&uart1>;
 		__overlay__ {
 			status = "okay";
@@ -39,27 +51,36 @@
 
 
 	/* Fixes because RPI does stupid stuff. */
-	fragment@2 {
+	fragment@3 {
 		target = <&phy1>;
 		__overlay__ {
 			reg = <0>;
 		};
 	};
 
-	fragment@3 {
+	fragment@4 {
 		target = <&i2c0>;
 		__overlay__ {
+			#gpio-cells = <2>;
+			#address-cells = <1>;
+			#size-cells = <0>;
 			status = "okay";
+
+			pinctrl-names = "default";
+			pinctrl-0 = <&i2c0_pins>;
+			clock-frequency = <400000>;
+
 			pcf8523@68 {
 				compatible = "nxp,pcf8523";
 				reg = <0x68>;
 				quartz-load-femtofarads = <7000>; /* in femto Farad (fF) */
-				interrupt = <SPI_GIC 53 IRQ_TYPE_LEVEL_HIGH>; // gpio6, int = "or of all i2c".
+
+				//interrupt = <SPI_GIC 53 IRQ_TYPE_LEVEL_HIGH>; // gpio6, int = "or of all i2c".
 			};
 		};
 	};
 
-	fragment@4 {
+	fragment@5 {
 		target = <&pcie0>; // PCIE2?
 		__overlay__ {
 			pci@2,0 {
@@ -74,7 +95,7 @@
 		};
 	};
 
-	fragment@5 {
+	fragment@6 {
 		target-path = "/"; // = <&gpio>;
 		__overlay__ {
 			leds_rgb {
@@ -105,25 +126,31 @@
 				restore {
 					label = "restore";
 					gpios = <&gpio 7 GPIO_ACTIVE_HIGH>; //input
-					linux,code = <KEY_RED>; // 0x18e
+					linux,code = <KEY_MACRO1>; // 0x290
 				};
 
 				pewake {
 					label = "nvm_wakeup";
 					gpios = <&gpio 8 GPIO_ACTIVE_HIGH>; //output
-					linux,code = <KEY_GREEN>; // 0x18f
+					linux,code = <KEY_MACRO2>; // 0x291
 				};
 
 				rtc_int {
 					label = "rtc_interrupt";
 					gpios = <&gpio 6 GPIO_ACTIVE_HIGH>; //input
-					linux,code =  <KEY_GREEN>; // 0x18f
+					linux,code =  <KEY_MACRO3>; // 0x292
 				};
 
 				lan_rst {
 					label = "lan_reset";
-					gpios = <&gpio 6 GPIO_ACTIVE_HIGH>; //input
-					linux,code = <KEY_BLUE>; // 0x191
+					gpios = <&gpio 4 GPIO_ACTIVE_HIGH>; //input
+					linux,code = <KEY_MACRO4>; // 0x293
+				};
+
+				pwr_fail {
+					label = "lan_reset";
+					gpios = <&gpio 2 GPIO_ACTIVE_HIGH>; //input
+					linux,code = <KEY_MACRO5>; // 0x294
 				};
 
 			};
