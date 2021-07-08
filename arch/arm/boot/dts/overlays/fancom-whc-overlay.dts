@@ -141,16 +141,15 @@
 
 				lan_rst {
 					label = "lan_reset";
-					gpios = <&gpio 4 GPIO_ACTIVE_HIGH>; //input
+					gpios = <&gpio 4 GPIO_ACTIVE_HIGH>; //output
 					linux,code = <0x293>; // 0x293 KEY_MACRO4
 				};
 
 				pwr_fail {
-					label = "lan_reset";
+					label = "power_fail";
 					gpios = <&gpio 2 GPIO_ACTIVE_HIGH>; //input
 					linux,code = <0x294>; // 0x294 KEY_MACRO5
 				};
-
 			};
 		};
 	};
