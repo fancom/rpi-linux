@@ -12,8 +12,6 @@
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/leds/common.h>
 
-#include <uapi/linux/input-event-codes.h> // KEY_RED, etc
-
 #include "cma-overlay.dts"
 
 / {
@@ -126,31 +124,31 @@
 				restore {
 					label = "restore";
 					gpios = <&gpio 7 GPIO_ACTIVE_HIGH>; //input
-					linux,code = <KEY_MACRO1>; // 0x290
+					linux,code = <0x290>; // 0x290 KEY_MACRO1
 				};
 
 				pewake {
 					label = "nvm_wakeup";
 					gpios = <&gpio 8 GPIO_ACTIVE_HIGH>; //output
-					linux,code = <KEY_MACRO2>; // 0x291
+					linux,code = <0x291>; // 0x291 KEY_MACRO2
 				};
 
 				rtc_int {
 					label = "rtc_interrupt";
 					gpios = <&gpio 6 GPIO_ACTIVE_HIGH>; //input
-					linux,code =  <KEY_MACRO3>; // 0x292
+					linux,code =  <0x292>; // 0x292 KEY_MACRO3
 				};
 
 				lan_rst {
 					label = "lan_reset";
 					gpios = <&gpio 4 GPIO_ACTIVE_HIGH>; //input
-					linux,code = <KEY_MACRO4>; // 0x293
+					linux,code = <0x293>; // 0x293 KEY_MACRO4
 				};
 
 				pwr_fail {
 					label = "lan_reset";
 					gpios = <&gpio 2 GPIO_ACTIVE_HIGH>; //input
-					linux,code = <KEY_MACRO5>; // 0x294
+					linux,code = <0x294>; // 0x294 KEY_MACRO5
 				};
 
 			};
