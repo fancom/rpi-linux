@@ -28,27 +28,27 @@
 
 			gpio_restore: gpio_restore {
 				brcm,pins = <7>;
-				brcm,function = <BCM2835_FSEL_GPIO_IN>
+				brcm,function = <BCM2835_FSEL_GPIO_IN>;
 			};
 
 			gpio_pewake: gpio_pewake {
 				brcm,pins = <8>;
-				brcm,function = <BCM2835_FSEL_GPIO_OUT>
+				brcm,function = <BCM2835_FSEL_GPIO_OUT>;
 			};
 
 			gpio_rtc_int: gpio_rtc_int {
 				brcm,pins = <6>;
-				brcm,function = <BCM2835_FSEL_GPIO_IN>
+				brcm,function = <BCM2835_FSEL_GPIO_IN>;
 			};
 
 			gpio_lan_rst: gpio_lan_rst {
 				brcm,pins = <4>;
-				brcm,function = <BCM2835_FSEL_GPIO_OUT>
+				brcm,function = <BCM2835_FSEL_GPIO_OUT>;
 			};
 
 			gpio_pwr_fail: gpio_pwr_fail {
 				brcm,pins = <2>;
-				brcm,function = <BCM2835_FSEL_GPIO_IN>
+				brcm,function = <BCM2835_FSEL_GPIO_IN>;
 			};
 
 		};
