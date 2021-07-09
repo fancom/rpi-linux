@@ -26,6 +26,15 @@
 				brcm,pull = <BCM2835_PUD_UP>;
 			};
 
+			gpio_out_pins {
+				brcm,pins = <4 8>;
+				brcm,function = <BCM2835_FSEL_GPIO_OUT>;
+			};
+
+			gpio_in_pins {
+				brcm,pins = <2 6 7>;
+				brcm,function = <BCM2835_FSEL_GPIO_OUT>;
+			};
 		};
 	};
 
