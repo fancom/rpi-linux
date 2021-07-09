@@ -26,15 +26,31 @@
 				brcm,pull = <BCM2835_PUD_UP>;
 			};
 
-			gpio_out_pins {
-				brcm,pins = <4 8>;
-				brcm,function = <BCM2835_FSEL_GPIO_OUT>;
+			gpio_restore: gpio_restore {
+				brcm,pins = <7>;
+				brcm,function = <BCM2835_FSEL_GPIO_IN>
 			};
 
-			gpio_in_pins {
-				brcm,pins = <2 6 7>;
-				brcm,function = <BCM2835_FSEL_GPIO_OUT>;
+			gpio_pewake: gpio_pewake {
+				brcm,pins = <8>;
+				brcm,function = <BCM2835_FSEL_GPIO_OUT>
 			};
+
+			gpio_rtc_int: gpio_rtc_int {
+				brcm,pins = <6>;
+				brcm,function = <BCM2835_FSEL_GPIO_IN>
+			};
+
+			gpio_lan_rst: gpio_lan_rst {
+				brcm,pins = <4>;
+				brcm,function = <BCM2835_FSEL_GPIO_OUT>
+			};
+
+			gpio_pwr_fail: gpio_pwr_fail {
+				brcm,pins = <2>;
+				brcm,function = <BCM2835_FSEL_GPIO_IN>
+			};
+
 		};
 	};
 
@@ -130,6 +146,14 @@
 			gpio-keys {
 				compatible = "gpio-keys";
 				autorepeat; //The autorepeat property allows holding the key to continuously generate events.
+				pinctrl-names = "default";
+
+				pinctrl-0 = <&gpio_restore>;
+				pinctrl-1 = <&gpio_pewake>;
+				pinctrl-2 = <&gpio_rtc_int>;
+				pinctrl-3 = <&gpio_lan_rst>;
+				pinctrl-4 = <&gpio_pwr_fail>;
+
 				restore {
 					label = "restore";
 					gpios = <&gpio 7 GPIO_ACTIVE_HIGH>; //input
