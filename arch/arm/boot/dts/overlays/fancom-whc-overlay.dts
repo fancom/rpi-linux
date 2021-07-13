@@ -1,5 +1,5 @@
 /*
- * vc4-kms-dsi-sn65dsi8x-overlay.dts
+ * Nobleo Technology
  */
 
 /dts-v1/;
@@ -25,32 +25,6 @@
 				brcm,function = <BCM2835_FSEL_ALT2>;
 				brcm,pull = <BCM2835_PUD_UP>;
 			};
-
-			gpio_restore: gpio_restore {
-				brcm,pins = <7>;
-				brcm,function = <BCM2835_FSEL_GPIO_IN>;
-			};
-
-			gpio_pewake: gpio_pewake {
-				brcm,pins = <8>;
-				brcm,function = <BCM2835_FSEL_GPIO_OUT>;
-			};
-
-			gpio_rtc_int: gpio_rtc_int {
-				brcm,pins = <6>;
-				brcm,function = <BCM2835_FSEL_GPIO_IN>;
-			};
-
-			gpio_lan_rst: gpio_lan_rst {
-				brcm,pins = <4>;
-				brcm,function = <BCM2835_FSEL_GPIO_OUT>;
-			};
-
-			gpio_pwr_fail: gpio_pwr_fail {
-				brcm,pins = <2>;
-				brcm,function = <BCM2835_FSEL_GPIO_IN>;
-			};
-
 		};
 	};
 
@@ -97,14 +71,28 @@
 				compatible = "nxp,pcf8523";
 				reg = <0x68>;
 				quartz-load-femtofarads = <7000>; /* in femto Farad (fF) */
-
-				//interrupt = <SPI_GIC 53 IRQ_TYPE_LEVEL_HIGH>; // gpio6, int = "or of all i2c".
+				status = "okay";
 			};
 		};
 	};
 
 	fragment@5 {
-		target = <&pcie0>; // PCIE2?
+		target = <&i2c0if>;
+		__overlay__ {
+			status = "okay";
+		};
+	};
+
+	fragment@6 {
+		target = <&i2c0mux>;
+		__overlay__ {
+			status = "okay";
+		};
+	};
+
+
+	fragment@7 {
+		target = <&pcie0>;
 		__overlay__ {
 			pci@2,0 {
 				// PCIe NVMe SSD M.2 slot, but how?
@@ -118,8 +106,8 @@
 		};
 	};
 
-	fragment@6 {
-		target-path = "/"; // = <&gpio>;
+	fragment@8 {
+		target-path = "/";
 		__overlay__ {
 			leds_rgb {
 				compatible = "gpio-leds"; /* See leds-gpio.yaml */
@@ -148,40 +136,16 @@
 				autorepeat; //The autorepeat property allows holding the key to continuously generate events.
 				pinctrl-names = "default";
 
-				pinctrl-0 = <&gpio_restore>;
-				pinctrl-1 = <&gpio_pewake>;
-				pinctrl-2 = <&gpio_rtc_int>;
-				pinctrl-3 = <&gpio_lan_rst>;
-				pinctrl-4 = <&gpio_pwr_fail>;
-
 				restore {
 					label = "restore";
-					gpios = <&gpio 7 GPIO_ACTIVE_HIGH>; //input
+					gpios = <&gpio 7 GPIO_ACTIVE_LOW>; //input
 					linux,code = <0x290>; // 0x290 KEY_MACRO1
 				};
 
 				pewake {
 					label = "nvm_wakeup";
-					gpios = <&gpio 8 GPIO_ACTIVE_HIGH>; //output
+					gpios = <&gpio 8 GPIO_ACTIVE_LOW>; //output
 					linux,code = <0x291>; // 0x291 KEY_MACRO2
-				};
-
-				rtc_int {
-					label = "rtc_interrupt";
-					gpios = <&gpio 6 GPIO_ACTIVE_HIGH>; //input
-					linux,code =  <0x292>; // 0x292 KEY_MACRO3
-				};
-
-				lan_rst {
-					label = "lan_reset";
-					gpios = <&gpio 4 GPIO_ACTIVE_HIGH>; //output
-					linux,code = <0x293>; // 0x293 KEY_MACRO4
-				};
-
-				pwr_fail {
-					label = "power_fail";
-					gpios = <&gpio 2 GPIO_ACTIVE_HIGH>; //input
-					linux,code = <0x294>; // 0x294 KEY_MACRO5
 				};
 			};
 		};

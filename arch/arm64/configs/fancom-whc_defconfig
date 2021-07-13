@@ -1291,7 +1291,7 @@ CONFIG_BLK_DEV_IO_TRACE=y
 # 
 # Disable unnecessary stuff.
 #
-# CONFIG_VIRTUALIZATION is not set
+CONFIG_VIRTUALIZATION=y
 # CONFIG_ATA is not set
 # CONFIG_WLAN is not set
 # CONFIG_PPS is not set
@@ -1440,5 +1440,5 @@ CONFIG_KEYBOARD_GPIO=y
 
 #
 # RTC
-#
+CONFIG_I2C_BCM2835=y
 CONFIG_RTC_DRV_PCF8523=y
