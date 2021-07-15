@@ -15,7 +15,7 @@
 #include "cma-overlay.dts"
 
 / {
-	compatible = "brcm,bcm2835";
+	compatible = "raspberrypi,4-compute-module", "brcm,bcm2835", "brcm,bcm2711";
 
 	fragment@0 {
 		target = <&gpio>;
@@ -23,6 +23,12 @@
 			i2c1_pins: i2c1 {
 				brcm,pins = <44 45>;
 				brcm,function = <BCM2835_FSEL_ALT2>;
+				brcm,pull = <BCM2835_PUD_UP>;
+			};
+
+			key_gpio: key_gpio {
+				brcm,pins = <7 8>;
+				brcm,function = <BCM2835_FSEL_GPIO_IN>;
 				brcm,pull = <BCM2835_PUD_UP>;
 			};
 		};
@@ -133,18 +139,20 @@
 
 			gpio-keys {
 				compatible = "gpio-keys";
-				autorepeat; //The autorepeat property allows holding the key to continuously generate events.
+				autorepeat; // Allows continuously generating events by hold.
 				pinctrl-names = "default";
+
+				pinctrl-0 = <&key_gpio>;
 
 				restore {
 					label = "restore";
-					gpios = <&gpio 7 GPIO_ACTIVE_LOW>; //input
+					gpios = <&gpio 7 GPIO_ACTIVE_LOW>;
 					linux,code = <0x290>; // 0x290 KEY_MACRO1
 				};
 
 				pewake {
 					label = "nvm_wakeup";
-					gpios = <&gpio 8 GPIO_ACTIVE_LOW>; //output
+					gpios = <&gpio 8 GPIO_ACTIVE_LOW>;
 					linux,code = <0x291>; // 0x291 KEY_MACRO2
 				};
 			};
