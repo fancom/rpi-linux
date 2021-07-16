@@ -100,15 +100,13 @@
 	fragment@7 {
 		target = <&pcie0>;
 		__overlay__ {
-			pci@2,0 {
-				// PCIe NVMe SSD M.2 slot, but how?
-
-				/*
-				 * https://en.wikipedia.org/wiki/M.2
-				 * https://forums.developer.nvidia.com/t/installing-nvme-drive/49957
-				 * https://community.nxp.com/t5/i-MX-Processors/IMX7D-PCIE-Support/td-p/810018
-				 */
-			};
+			status = "okay";
+//			pci@0,0 {
+//				// PCIe NVMe SSD M.2 slot, but how?
+//				// https://en.wikipedia.org/wiki/M.2
+//				// https://forums.developer.nvidia.com/t/installing-nvme-drive/49957
+//				// https://community.nxp.com/t5/i-MX-Processors/IMX7D-PCIE-Support/td-p/810018
+//			};
 		};
 	};
 
@@ -136,6 +134,13 @@
 					default-state = "off";
 				};
 			};
+		};
+	};
+
+	fragment@9 {
+		target = <&spi0>;
+		__overlay__ {
+			status = "disabled";
 		};
 	};
 };
