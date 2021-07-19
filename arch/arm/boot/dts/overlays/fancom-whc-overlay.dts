@@ -101,6 +101,12 @@
 		target = <&pcie0>;
 		__overlay__ {
 			status = "okay";
+			pci0,0 {
+				#address-cells = <3>;
+				#size-cells = <2>;
+				reg = <0 0 0 0 0>;
+				device_type = "pci";
+			};
 //			pci@0,0 {
 //				// PCIe NVMe SSD M.2 slot, but how?
 //				// https://en.wikipedia.org/wiki/M.2
