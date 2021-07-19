@@ -101,12 +101,14 @@
 		target = <&pcie0>;
 		__overlay__ {
 			status = "okay";
-			pci0,0 {
-				#address-cells = <3>;
-				#size-cells = <2>;
-				reg = <0 0 0 0 0>;
-				device_type = "pci";
-			};
+			compatible = "brcm,bcm2711-pcie", "brcm,bcm7445-pcie";
+			dma-ranges = <0x02000000 0x00000004 0x00000000 0x00000000 0x00000000 0x00000001 0x00000000>;
+//			pci0,0 {
+//				#address-cells = <3>;
+//				#size-cells = <2>;
+//				reg = <0 0 0 0 0>;
+//				device_type = "pci";
+//			};
 //			pci@0,0 {
 //				// PCIe NVMe SSD M.2 slot, but how?
 //				// https://en.wikipedia.org/wiki/M.2
