@@ -113,18 +113,6 @@
 				<0x40000000  0x0 0xff800000  0x00800000>;
 			/* Emulate a contiguous 30-bit address range for DMA */
 			dma-ranges = <0xc0000000  0x0 0x00000000  0x40000000>;
-//			pci0,0 {
-//				#address-cells = <3>;
-//				#size-cells = <2>;
-//				reg = <0 0 0 0 0>;
-//				device_type = "pci";
-//			};
-//			pci@0,0 {
-//				// PCIe NVMe SSD M.2 slot, but how?
-//				// https://en.wikipedia.org/wiki/M.2
-//				// https://forums.developer.nvidia.com/t/installing-nvme-drive/49957
-//				// https://community.nxp.com/t5/i-MX-Processors/IMX7D-PCIE-Support/td-p/810018
-//			};
 		};
 	};
 
