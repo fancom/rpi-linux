@@ -102,7 +102,7 @@
 		__overlay__ {
 			status = "okay";
 			compatible = "brcm,bcm2711-pcie", "brcm,bcm7445-pcie";
-			max-link-speed = <1>;
+			max-link-speed = <2>;
 			/*
 			 * Defined ranges:
 			 *   Common BCM283x peripherals
