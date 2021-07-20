@@ -698,6 +698,8 @@ static bool brcm_pcie_link_up(struct brcm_pcie *pcie)
 	u32 dla = FIELD_GET(PCIE_MISC_PCIE_STATUS_PCIE_DL_ACTIVE_MASK, val);
 	u32 plu = FIELD_GET(PCIE_MISC_PCIE_STATUS_PCIE_PHYLINKUP_MASK, val);
 
+	timbug("val = %u, dla = %u, plu = %u", val, dla, plu);
+
 	return dla && plu;
 }
 
@@ -909,8 +911,10 @@ static int brcm_pcie_setup(struct brcm_pcie *pcie)
 
 	ret = brcm_pcie_get_rc_bar2_size_and_offset(pcie, &rc_bar2_size,
 						    &rc_bar2_offset);
-	if (ret)
+	if (ret) {
+		timbug("brcm_pcie_get_rc_bar2_size_and_offset: ret = %d", ret);
 		return ret;
+	}
 
 	tmp = lower_32_bits(rc_bar2_offset);
 	u32p_replace_bits(&tmp, brcm_pcie_encode_ibar_size(rc_bar2_size),
@@ -964,7 +968,7 @@ static int brcm_pcie_setup(struct brcm_pcie *pcie)
 	 * Give the RC/EP time to wake up, before trying to configure RC.
 	 * Intermittently check status for link-up, up to a total of 100ms.
 	 */
-	for (i = 0; i < 100 && !brcm_pcie_link_up(pcie); i += 5)
+	for (i = 0; i < 5000 && !brcm_pcie_link_up(pcie); i += 5)
 		msleep(5);
 
 	if (!brcm_pcie_link_up(pcie)) {
@@ -1311,8 +1315,10 @@ static int brcm_pcie_probe(struct platform_device *pdev)
 	timbug("brcm_phy_start: ret=%d, continuing", ret);
 
 	ret = brcm_pcie_setup(pcie);
-	if (ret)
+	if (ret) {
+		timbug("brcm_pcie_setup: ret is %d", ret);
 		goto fail;
+	}
 
 	pcie->hw_rev = readl(pcie->base + PCIE_MISC_REVISION);
 
