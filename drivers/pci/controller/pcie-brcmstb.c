@@ -31,6 +31,9 @@
 
 #include "../pci.h"
 
+#define timbug(fmt, ...) \
+printk(KERN_ERR "TIM: %s: " fmt "\n", __func__, ##__VA_ARGS__);
+
 /* BRCM_PCIE_CAP_REGS - Offset for the mandatory capability config regs */
 #define BRCM_PCIE_CAP_REGS				0x00ac
 
@@ -1266,7 +1269,9 @@ static int brcm_pcie_probe(struct platform_device *pdev)
 		return PTR_ERR(pcie->clk);
 
 	ret = of_pci_get_max_link_speed(np);
+
 	pcie->gen = (ret < 0) ? 0 : ret;
+	timbug("ret is %d", ret);
 
 	pcie->ssc = of_property_read_bool(np, "brcm,enable-ssc");
 	pcie->l1ss = of_property_read_bool(np, "brcm,enable-l1ss");
