@@ -97,12 +97,14 @@
 	};
 
 
-	fragment@7 {
+	fragment@8 {
 		target = <&pcie0>;
 		__overlay__ {
 			status = "okay";
 			compatible = "brcm,bcm2711-pcie", "brcm,bcm7445-pcie";
 			max-link-speed = <2>;
+
+			reset-names = "rescal";
 			/*
 			 * Defined ranges:
 			 *   Common BCM283x peripherals
@@ -130,7 +132,7 @@
 		};
 	};
 
-	fragment@8 {
+	fragment@9 {
 		target-path = "/";
 		__overlay__ {
 			leds_rgb {
@@ -157,7 +159,7 @@
 		};
 	};
 
-	fragment@9 {
+	fragment@10 {
 		target = <&spi0>;
 		__overlay__ {
 			status = "disabled";
