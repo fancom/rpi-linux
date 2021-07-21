@@ -1296,9 +1296,11 @@ static int brcm_pcie_probe(struct platform_device *pdev)
 	}
 	pcie->rescal = devm_reset_control_get_optional_shared(&pdev->dev, "rescal");
 	if (IS_ERR(pcie->rescal)) {
-		timbug("IS_ERR(pcie->rescal) !!! ");
+		timbug("IS_ERR(pcie->rescal) !!!");
 		clk_disable_unprepare(pcie->clk);
 		return PTR_ERR(pcie->rescal);
+	} else if (pcie->rescal == NULL) {
+		timbug("pcie->rescal is NULL !!!");
 	}
 
 	ret = reset_control_reset(pcie->rescal);

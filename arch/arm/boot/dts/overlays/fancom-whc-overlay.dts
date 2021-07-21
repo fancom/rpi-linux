@@ -104,7 +104,7 @@
 			compatible = "brcm,bcm2711-pcie", "brcm,bcm7445-pcie";
 			max-link-speed = <2>;
 
-			reset-names = "rescal";
+			//reset-names = "rescal";
 			/*
 			 * Defined ranges:
 			 *   Common BCM283x peripherals
