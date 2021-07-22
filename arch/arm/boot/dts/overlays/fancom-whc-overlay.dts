@@ -52,7 +52,6 @@
 		};
 	};
 
-
 	/* Fixes because RPI does stupid stuff. */
 	fragment@3 {
 		target = <&phy1>;
@@ -96,13 +95,17 @@
 		};
 	};
 
-
 	fragment@8 {
 		target = <&pcie0>;
 		__overlay__ {
 			status = "okay";
 			compatible = "brcm,bcm2711-pcie", "brcm,bcm7445-pcie";
 			max-link-speed = <2>;
+
+			pci@1,0 {
+				status = "okay";
+				/delete-node/ usb@1,0;
+			};
 
 			//reset-names = "rescal";
 			/*
