@@ -31,9 +31,6 @@
 
 #include "../pci.h"
 
-#define timbug(fmt, ...) \
-printk(KERN_ERR "TIM: %s: " fmt "\n", __func__, ##__VA_ARGS__);
-
 /* BRCM_PCIE_CAP_REGS - Offset for the mandatory capability config regs */
 #define BRCM_PCIE_CAP_REGS				0x00ac
 
@@ -491,7 +488,7 @@ static void brcm_pcie_msi_isr(struct irq_desc *desc)
 		if (virq)
 			generic_handle_irq(virq);
 		else
-			printk(KERN_ERR "TIM: unexpected MSI\n");
+			dev_dbg(dev, "unexpected MSI\n");
 	}
 
 	chained_irq_exit(chip, desc);
@@ -584,7 +581,7 @@ static int brcm_allocate_domains(struct brcm_msi *msi)
 
 	msi->inner_domain = irq_domain_add_linear(NULL, msi->nr, &msi_domain_ops, msi);
 	if (!msi->inner_domain) {
-		printk(KERN_ERR "TIM: failed to create IRQ domain\n");
+		dev_err(dev, "failed to create IRQ domain\n");
 		return -ENOMEM;
 	}
 
@@ -592,7 +589,7 @@ static int brcm_allocate_domains(struct brcm_msi *msi)
 						    &brcm_msi_domain_info,
 						    msi->inner_domain);
 	if (!msi->msi_domain) {
-		printk(KERN_ERR "TIM: failed to create MSI domain\n");
+		dev_err(dev, "failed to create MSI domain\n");
 		irq_domain_remove(msi->inner_domain);
 		return -ENOMEM;
 	}
@@ -645,7 +642,7 @@ static int brcm_pcie_enable_msi(struct brcm_pcie *pcie)
 
 	irq = irq_of_parse_and_map(dev->of_node, 1);
 	if (irq <= 0) {
-		printk(KERN_ERR "TIM: cannot map MSI interrupt\n");
+		dev_err(dev, "cannot map MSI interrupt\n");
 		return -ENODEV;
 	}
 
@@ -697,8 +694,6 @@ static bool brcm_pcie_link_up(struct brcm_pcie *pcie)
 	u32 val = readl(pcie->base + PCIE_MISC_PCIE_STATUS);
 	u32 dla = FIELD_GET(PCIE_MISC_PCIE_STATUS_PCIE_DL_ACTIVE_MASK, val);
 	u32 plu = FIELD_GET(PCIE_MISC_PCIE_STATUS_PCIE_PHYLINKUP_MASK, val);
-
-	timbug("val = %u, dla = %u, plu = %u", val, dla, plu);
 
 	return dla && plu;
 }
@@ -794,7 +789,7 @@ static inline int brcm_pcie_get_rc_bar2_size_and_offset(struct brcm_pcie *pcie,
 	}
 
 	if (lowest_pcie_addr == ~(u64)0) {
-		printk(KERN_ERR "TIM: DT node has no dma-ranges\n");
+		dev_err(dev, "DT node has no dma-ranges\n");
 		return -EINVAL;
 	}
 
@@ -853,7 +848,7 @@ static inline int brcm_pcie_get_rc_bar2_size_and_offset(struct brcm_pcie *pcie,
 	 */
 	if (!*rc_bar2_size || (*rc_bar2_offset & (*rc_bar2_size - 1)) ||
 	    (*rc_bar2_offset < SZ_4G && *rc_bar2_offset > SZ_2G)) {
-		printk(KERN_ERR "TIM: Invalid rc_bar2_offset/size: size 0x%llx, off 0x%llx\n",
+		dev_err(dev, "Invalid rc_bar2_offset/size: size 0x%llx, off 0x%llx\n",
 			*rc_bar2_size, *rc_bar2_offset);
 		return -EINVAL;
 	}
@@ -911,10 +906,8 @@ static int brcm_pcie_setup(struct brcm_pcie *pcie)
 
 	ret = brcm_pcie_get_rc_bar2_size_and_offset(pcie, &rc_bar2_size,
 						    &rc_bar2_offset);
-	if (ret) {
-		timbug("brcm_pcie_get_rc_bar2_size_and_offset: ret = %d", ret);
+	if (ret)
 		return ret;
-	}
 
 	tmp = lower_32_bits(rc_bar2_offset);
 	u32p_replace_bits(&tmp, brcm_pcie_encode_ibar_size(rc_bar2_size),
@@ -968,16 +961,16 @@ static int brcm_pcie_setup(struct brcm_pcie *pcie)
 	 * Give the RC/EP time to wake up, before trying to configure RC.
 	 * Intermittently check status for link-up, up to a total of 100ms.
 	 */
-	for (i = 0; i < 5000 && !brcm_pcie_link_up(pcie); i += 5)
+	for (i = 0; i < 100 && !brcm_pcie_link_up(pcie); i += 5)
 		msleep(5);
 
 	if (!brcm_pcie_link_up(pcie)) {
-		printk(KERN_ERR "TIM: link down\n");
+		dev_err(dev, "link down\n");
 		return -ENODEV;
 	}
 
 	if (!brcm_pcie_rc_mode(pcie)) {
-		printk(KERN_ERR "TIM: PCIe misconfigured; is in EP mode\n");
+		dev_err(dev, "PCIe misconfigured; is in EP mode\n");
 		return -EINVAL;
 	}
 
@@ -988,7 +981,7 @@ static int brcm_pcie_setup(struct brcm_pcie *pcie)
 			continue;
 
 		if (num_out_wins >= BRCM_NUM_PCIE_OUT_WINS) {
-			printk(KERN_ERR "TIM: too many outbound wins\n");
+			dev_err(pcie->dev, "too many outbound wins\n");
 			return -EINVAL;
 		}
 
@@ -1021,13 +1014,13 @@ static int brcm_pcie_setup(struct brcm_pcie *pcie)
 		if (ret == 0)
 			ssc_good = true;
 		else
-			printk(KERN_ERR "TIM: failed attempt to enter ssc mode\n");
+			dev_err(dev, "failed attempt to enter ssc mode\n");
 	}
 
 	lnksta = readw(base + BRCM_PCIE_CAP_REGS + PCI_EXP_LNKSTA);
 	cls = FIELD_GET(PCI_EXP_LNKSTA_CLS, lnksta);
 	nlw = FIELD_GET(PCI_EXP_LNKSTA_NLW, lnksta);
-	printk(KERN_ERR "TIM: link up, %s x%u %s\n",
+	dev_info(dev, "link up, %s x%u %s\n",
 		 pci_speed_string(pcie_link_speed[cls]), nlw,
 		 ssc_good ? "(SSC)" : "(!SSC)");
 
@@ -1084,7 +1077,7 @@ static void brcm_pcie_enter_l23(struct brcm_pcie *pcie)
 	}
 
 	if (!l23)
-		printk(KERN_ERR "TIM: failed to enter low-power link state\n");
+		dev_err(pcie->dev, "failed to enter low-power link state\n");
 }
 
 static int brcm_phy_cntl(struct brcm_pcie *pcie, const int start)
@@ -1104,8 +1097,6 @@ static int brcm_phy_cntl(struct brcm_pcie *pcie, const int start)
 	void __iomem *base = pcie->base;
 	int i, ret;
 
-	timbug("%s", (start? "starting" : "stopping"));
-
 	for (i = beg; i != end; start ? i++ : i--) {
 		val = start ? BIT_MASK(shifts[i]) : 0;
 		tmp = readl(base + PCIE_DVT_PMU_PCIE_PHY_CTRL);
@@ -1120,7 +1111,7 @@ static int brcm_phy_cntl(struct brcm_pcie *pcie, const int start)
 
 	ret = (tmp & combined_mask) == val ? 0 : -EIO;
 	if (ret)
-		printk(KERN_ERR "TIM: failed to %s phy\n", (start ? "start" : "stop"));
+		dev_err(pcie->dev, "failed to %s phy\n", (start ? "start" : "stop"));
 
 	return ret;
 }
@@ -1275,45 +1266,36 @@ static int brcm_pcie_probe(struct platform_device *pdev)
 		return PTR_ERR(pcie->clk);
 
 	ret = of_pci_get_max_link_speed(np);
-
 	pcie->gen = (ret < 0) ? 0 : ret;
-	timbug("ret is %d", ret);
 
 	pcie->ssc = of_property_read_bool(np, "brcm,enable-ssc");
 	pcie->l1ss = of_property_read_bool(np, "brcm,enable-l1ss");
 
 	ret = clk_prepare_enable(pcie->clk);
 	if (ret) {
-		printk(KERN_ERR "TIM: could not enable clock\n");
+		dev_err(&pdev->dev, "could not enable clock\n");
 		return ret;
 	}
 	pcie->rescal = devm_reset_control_get_optional_shared(&pdev->dev, "rescal");
 	if (IS_ERR(pcie->rescal)) {
-		timbug("IS_ERR(pcie->rescal) !!!");
 		clk_disable_unprepare(pcie->clk);
 		return PTR_ERR(pcie->rescal);
-	} else if (pcie->rescal == NULL) {
-		timbug("pcie->rescal is NULL !!!");
 	}
 
 	ret = reset_control_deassert(pcie->rescal);
 	if (ret)
-		printk(KERN_ERR "TIM: failed to deassert 'rescal'\n");
+		dev_err(&pdev->dev, "failed to deassert 'rescal'\n");
 
 	ret = brcm_phy_start(pcie);
 	if (ret) {
-		timbug("brcm_phy_start: ret=%d, returning", ret);
 		reset_control_assert(pcie->rescal);
 		clk_disable_unprepare(pcie->clk);
 		return ret;
 	}
-	timbug("brcm_phy_start: ret=%d, continuing", ret);
 
 	ret = brcm_pcie_setup(pcie);
-	if (ret) {
-		timbug("brcm_pcie_setup: ret is %d", ret);
+	if (ret)
 		goto fail;
-	}
 
 	pcie->hw_rev = readl(pcie->base + PCIE_MISC_REVISION);
 
@@ -1321,7 +1303,7 @@ static int brcm_pcie_probe(struct platform_device *pdev)
 	if (pci_msi_enabled() && msi_np == pcie->np) {
 		ret = brcm_pcie_enable_msi(pcie);
 		if (ret) {
-			printk(KERN_ERR "TIM: probe of internal MSI failed");
+			dev_err(pcie->dev, "probe of internal MSI failed");
 			goto fail;
 		}
 	}
@@ -1333,7 +1315,6 @@ static int brcm_pcie_probe(struct platform_device *pdev)
 
 	return pci_host_probe(bridge);
 fail:
-	timbug("executing failure..", ret);
 	__brcm_pcie_remove(pcie);
 	return ret;
 }
