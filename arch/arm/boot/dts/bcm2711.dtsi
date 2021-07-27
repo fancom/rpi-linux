@@ -514,7 +514,7 @@
 
 		pcie0: pcie@7d500000 {
 			compatible = "brcm,bcm2711-pcie";
-			reg = <0x0 0x7d500000  0x0 0x9310  0x0 0x7e00f300  0x0 0x20>;
+			reg = <0x0 0x7d500000  0x0 0x9310>;
 			device_type = "pci";
 			#address-cells = <3>;
 			#interrupt-cells = <1>;
@@ -524,26 +524,12 @@
 			interrupt-names = "pcie", "msi";
 			interrupt-map-mask = <0x0 0x0 0x0 0x7>;
 			interrupt-map = <0 0 0 1 &gicv2 GIC_SPI 143
-					IRQ_TYPE_LEVEL_HIGH
-				 0 0 0 2 &gicv2 GIC_SPI 144
-					IRQ_TYPE_LEVEL_HIGH
-				 0 0 0 3 &gicv2 GIC_SPI 145
-					IRQ_TYPE_LEVEL_HIGH
-				 0 0 0 4 &gicv2 GIC_SPI 146
-					IRQ_TYPE_LEVEL_HIGH>;
+							IRQ_TYPE_LEVEL_HIGH>;
 			msi-controller;
 			msi-parent = <&pcie0>;
 
-			max-link-speed = <2>;
-			tot-num-pcie = <1>;
-			bus-range = <0x0 0xff>;
-			linux,pci-domain = <0>;
-
 			ranges = <0x02000000 0x0 0xc0000000 0x6 0x00000000
 				0x0 0x40000000>;
-
-//			ranges = <0x02000000 0x0 0xf8000000 0x6 0x00000000
-//							  0x0 0x04000000>;
 			/*
 			 * The wrapper around the PCIe block has a bug
 			 * preventing it from accessing beyond the first 3GB of
@@ -551,9 +537,6 @@
 			 */
 			dma-ranges = <0x02000000 0x0 0x00000000 0x0 0x00000000
 				      0x0 0xc0000000>;
-
-			//Spread Spectrum Clocking (SSC) is a common
-			//way to overcome EMI issues (ElectroMagnatic Interface)
 			brcm,enable-ssc;
 		};
 
