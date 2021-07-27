@@ -41,11 +41,6 @@ int reset_control_get_count(struct device *dev);
 
 #else
 
-static inline int reset_control_rearm(struct reset_control *rstc)
-{
-	return 0;
-}
-
 static inline int reset_control_reset(struct reset_control *rstc)
 {
 	return 0;
