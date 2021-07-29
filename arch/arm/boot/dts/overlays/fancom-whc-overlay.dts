@@ -75,7 +75,11 @@
 			pcf8523@68 {
 				compatible = "nxp,pcf8523";
 				reg = <0x68>;
-				quartz-load-femtofarads = <7000>; /* in femto Farad (fF) */
+				/* quartz-load-femtofarads in femto Farad (fF)
+				 *
+				 * Actual is 6000fF, driver accepts min/max of 7000/12500
+				 */
+				quartz-load-femtofarads = <7000>;
 				status = "okay";
 			};
 		};
