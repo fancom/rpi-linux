@@ -38,6 +38,11 @@
 				brcm,pins = <17>; /* pin 50 */
 				brcm,function = <BCM2835_FSEL_GPIO_OUT>;
 			};
+
+			power_fail_int: power_fail_int {
+				brcm,pins = <2>; /* pin 58 */
+				brcm,function = <BCM2835_FSEL_GPIO_IN>;
+			};
 		};
 	};
 
