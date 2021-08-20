@@ -12,7 +12,7 @@
 #include "cma-overlay.dts"
 
 / {
-	compatible = "brcm,bcm2835", "raspberrypi,4-compute-module";
+	compatible = "brcm,bcm2835", "raspberrypi,4-compute-module", "brcm,bcm2711";
 
 	/* PWM0 function */
 	fragment@0 {
@@ -42,7 +42,6 @@
 			power_fail_gpio: power_fail_gpio {
 				brcm,pins = <2>; /* pin 58 */
 				brcm,function = <BCM2835_FSEL_GPIO_IN>;
-				brcm,pull = <BCM2835_PUD_UP>;
 			};
 		};
 	};
