@@ -475,7 +475,7 @@
 
 	i2c1_pins: i2c1 {
 		brcm,pins = <2 3>;
-		brcm,function = <BCM2835_FSEL_ALT0>;
+		brcm,function = <BCM2835_FSEL_GPIO_IN>;
 		brcm,pull = <BCM2835_PUD_UP>;
 	};
 
