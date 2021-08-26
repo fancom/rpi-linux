@@ -2,17 +2,17 @@
  * vc4-kms-dsi-sn65dsi8x-overlay.dts
  */
 
-/dts-v1/;
-/plugin/;
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/pinctrl/bcm2835.h>
 #include <dt-bindings/interrupt-controller/irq.h>
 #include <dt-bindings/clock/bcm2835.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
 
-#include "cma-overlay.dts"
+/dts-v1/;
+/plugin/;
 
 / {
-	compatible = "brcm,bcm2835";
+	compatible = "raspberrypi,4-compute-module", "brcm,bcm2835", "brcm,bcm2711";
 
 	/* PWM0 function */
 	fragment@0 {
@@ -43,7 +43,7 @@
 
 	fragment@1 {
 		target = <&pwm>;
-		frag1: __overlay__ {
+		__overlay__ {
 			pinctrl-names = "default";
 			pinctrl-0 = <&pwm_pins>;
 			assigned-clock-rates = <100000000>;
@@ -54,6 +54,20 @@
 	fragment@2 {
 		target-path = "/";
 		__overlay__ {
+			// Becahse RPI does stupid stuff
+			memreserve = <0x30000000 0x10000000>;
+			system {
+				linux,serial = <0x10000000 0xf00bef2c>;
+				linux,revision = <0x00c03140>;
+			};
+
+			axi {
+				vc_mem {
+					reg = <0x3ec00000 0x40000000 0xc0000000>;
+				};
+			};
+
+			//FANCOM
 			backlight_lvds: backlight {
 				compatible = "pwm-backlight";
 				pwms = <&pwm 0 5000000>; /* 200Hz */
@@ -109,6 +123,9 @@
 				};
 
 				ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
 					port@0 {
 						reg = <0>;
 						dual-lvds-odd-pixels;
@@ -150,7 +167,7 @@
 				pinctrl-0 = <&dsi_lvds_en>;
 				status = "okay";
 
-				interrupts = <36 IRQ_TYPE_LEVEL_HIGH>;
+				interrupts = <GIC_SPI 36 IRQ_TYPE_LEVEL_HIGH>;
 
 				ports {
 					#address-cells = <1>;
@@ -203,7 +220,7 @@
 			status = "okay";
 		};
 	};
-		
+
 	fragment@6 {
 		target = <&i2c0mux>;
 		__overlay__ {
@@ -211,27 +228,161 @@
 		};
 	};
 
-	fragment@20 {
-		target = <&vc4>;
+	fragment@7 { /* Debug port */
+		target = <&uart1_pins>;
 		__overlay__ {
+			brcm,pins = <14 15>; /* pin 51, 55 */
+			brcm,function = <BCM2835_FSEL_ALT0>;
+			brcm,pull = <0 2>;
+		};
+	};
+
+	fragment@8 { /* Debug port */
+		target = <&uart1>;
+		__overlay__ {
+			status = "okay";
+			pinctrl-names = "default";
+			pinctrl-0 = <&uart1_pins>;
+		};
+	};
+
+	fragment@9 { /* HPAN */
+		target = <&uart3_pins>;
+		__overlay__ {
+			brcm,pins = <4 5 6 7>; /* pin 54, 34, 30, 37 */
+			brcm,function = <
+				BCM2835_FSEL_GPIO_OUT
+				BCM2835_FSEL_GPIO_OUT
+				BCM2835_FSEL_GPIO_IN
+				BCM2835_FSEL_GPIO_OUT /* Uncertain. */
+			>;
+			brcm,pull = <0 2 2 0>;
+		};
+	};
+
+	fragment@10 { /* HPAN */
+		target = <&uart3>;
+		__overlay__ {
+			pinctrl-names = "default";
+			pinctrl-0 = <&uart3_pins>;
 			status = "okay";
 		};
 	};
-	fragment@21 {
+
+	/* Fixes because RPI does stupid stuff. */
+	fragment@1000 {
+		target = <&phy1>;
+		__overlay__ {
+			reg = <0>;
+		};
+	};
+
+	fragment@1001 {
+		target = <&emmc2bus>;
+		__overlay__ {
+			dma-ranges = <0x00000000 0x00000000 0x00000000 0x00000000 0xfc000000>;
+			status = "okay";
+		};
+	};
+
+	fragment@1002 {
+		target-path = "/";
+		__overlay__ {
+			memory@0 {
+				device_type = "memory";
+				reg = <0x00000000 0x00000000 0x30000000 0x00000000 0x40000000 0xbc000000>;
+			};
+		};
+	};
+
+	fragment@1003 {
+		target = <&dma>;
+		__overlay__ {
+			brcm,dma-channel-mask = <0x00003000>;
+		};
+	};
+
+	fragment@1004 { /* nvram */
+		target = <&blconfig>;
+		__overlay__ {
+			reg = <0x00000000 0x3ef5c100 0x00000056>;
+			status = "okay";
+		};
+	};
+
+	fragment@1005 {
+		taget = <&pcie0>;
+		__overlay__ {
+			compatible = "brcm,bcm2711-pcie", "brcm,bcm7445-pcie";
+			dma-ranges = <0x02000000 0x00000004 0x00000000 0x00000000 0x00000000 0x00000001 0x00000000>;
+		};
+	};
+
+	/* cma-overlay.dts */
+	fragment@2000 {
+		target = <&cma>;
+		__overlay__ {
+			/*
+			 * The default size when using this overlay is 256 MB
+			 * and should be kept as is for backwards
+			 * compatibility.
+			 */
+			size = <0x10000000>;
+		};
+	};
+
+	fragment@3002 {
+		target = <&fb>;
+		__overlay__  {
+			status = "disabled";
+		};
+	};
+
+	fragment@3003 {
+		target = <&pixelvalve0>;
+		__overlay__  {
+			status = "okay";
+		};
+	};
+
+	fragment@3004 {
+		target = <&pixelvalve1>;
+		__overlay__  {
+			status = "okay";
+		};
+	};
+
+	fragment@3005 {
+		target = <&pixelvalve2>;
+		__overlay__  {
+			status = "okay";
+		};
+	};
+
+	fragment@3006 {
 		target = <&hvs>;
-		__overlay__ {
+		__overlay__  {
 			status = "okay";
 		};
 	};
-	fragment@22 {
+
+	fragment@3008 {
 		target = <&v3d>;
-		__overlay__ {
+		__overlay__  {
 			status = "okay";
 		};
 	};
-	fragment@23 {
+
+	fragment@3009 {
+		target = <&vc4>;
+		__overlay__  {
+			status = "okay";
+		};
+	};
+
+	fragment@3010 {
 		target = <&clocks>;
-		__overlay__ {
+		__overlay__  {
 			claim-clocks = <
 				BCM2835_PLLD_DSI0
 				BCM2835_PLLD_DSI1
@@ -241,59 +392,109 @@
 		};
 	};
 
-	fragment@24 {
+	fragment@3011 {
 		target = <&vec>;
-		__overlay__ {
+		__overlay__  {
 			status = "okay";
 		};
 	};
 
-	fragment@25 {
+	fragment@3012 {
 		target = <&txp>;
+		__overlay__  {
+			status = "disabled"; /* Was "okay" */
+		};
+	};
+
+	/* dwc2-overlay.dts */
+	fragment@4000 {
+		target = <&usb>;
 		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <1>;
+			compatible = "brcm,bcm2835-usb";
+			dr_mode = "otg";
+			g-np-tx-fifo-size = <32>;
+			g-rx-fifo-size = <558>;
+			g-tx-fifo-size = <512 512 512 512 512 256 256>;
 			status = "okay";
 		};
 	};
 
-	fragment@26 {
-		target = <&pixelvalve0>;
-		__overlay__  {
+	/* disable-bt-overlay.dts */
+	fragment@5000 {
+		target = <&uart0>;
+		__overlay__ {
+			pinctrl-names = "default";
+			pinctrl-0 = <&uart0_pins>;
 			status = "okay";
 		};
 	};
 
-	fragment@27 {
-		target = <&pixelvalve1>;
-		__overlay__  {
-			status = "okay";
+	fragment@5001 {
+		target = <&bt>;
+		__overlay__ {
+			status = "disabled";
 		};
 	};
 
-	fragment@28 {
-		target = <&pixelvalve2>;
-		__overlay__  {
-			status = "okay";
+	fragment@5002 {
+		target = <&uart0_pins>;
+		__overlay__ {
+			brcm,pins;
+			brcm,function;
+			brcm,pull;
 		};
 	};
 
-	fragment@29 {
-		target = <&pixelvalve3>;
-		__overlay__  {
-			status = "okay";
+	fragment@5003 {
+		target = <&bt_pins>;
+		__overlay__ {
+			brcm,pins;
+			brcm,function;
+			brcm,pull;
 		};
 	};
 
-	fragment@30 {
-		target = <&pixelvalve4>;
-		__overlay__  {
-			status = "okay";
+	fragment@5004 {
+		target-path = "/aliases";
+		__overlay__ {
+			serial0 = "/soc/serial@7e201000";
+			serial1 = "/soc/serial@7e215040";
 		};
 	};
 
-	fragment@31 {
-		target = <&fb>;
-		__overlay__  {
-			status = "okay";
-		};
+	__overrides__ {
+
+		/* Because RPI does stupid stuff. */
+		i2c_arm_baudrate = [00 00 00 35 63 6c 6f 63 6b 2d 66 72 65 71 75 65 6e 63 79 3a 30 00];
+		i2c_baudrate = [00 00 00 35 63 6c 6f 63 6b 2d 66 72 65 71 75 65 6e 63 79 3a 30 00];
+		i2c_arm = [00 00 00 35 73 74 61 74 75 73 00];
+		i2c = [00 00 00 35 73 74 61 74 75 73 00];
+		i2c_vc_baudrate = [00 00 00 10 63 6c 6f 63 6b 2d 66 72 65 71 75 65 6e 63 79 3a 30 00];
+		i2c_vc = [00 00 00 10 73 74 61 74 75 73 00 00 00 00 34 73 74 61 74 75 73 00];
+
+		/* cma-overlay.dts */
+		cma-512 = <&cma>,"size:0=",<0x20000000>;
+		cma-448 = <&cma>,"size:0=",<0x1c000000>;
+		cma-384 = <&cma>,"size:0=",<0x18000000>;
+		cma-320 = <&cma>,"size:0=",<0x14000000>;
+		cma-256 = <&cma>,"size:0=",<0x10000000>;
+		cma-192 = <&cma>,"size:0=",<0xC000000>;
+		cma-128 = <&cma>,"size:0=",<0x8000000>;
+		cma-96  = <&cma>,"size:0=",<0x6000000>;
+		cma-64  = <&cma>,"size:0=",<0x4000000>;
+		cma-size = <&cma>,"size:0"; /* in bytes, 4MB aligned */
+		cma-default = <0>,"-0";
+
+		/* vc4-kms-v3d.dts */
+		audio   = <0>,"!13", <0>,"=14";
+		noaudio = <0>,"=13", <0>,"!14";
+		nocomposite = <0>, "!11";
+
+		/* dwc2-overlay.dts */
+		dr_mode = <&usb>, "dr_mode";
+		g-np-tx-fifo-size = <&usb>,"g-np-tx-fifo-size:0";
+		g-rx-fifo-size = <&usb>,"g-rx-fifo-size:0";
 	};
 };
