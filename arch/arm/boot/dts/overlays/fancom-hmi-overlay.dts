@@ -270,20 +270,20 @@
 	};
 
 	/* Fixes because RPI does stupid stuff. */
-	fragment@1000 {
-		target = <&phy1>;
-		__overlay__ {
-			reg = <0>;
-		};
-	};
+//	fragment@1000 {
+//		target = <&phy1>;
+//		__overlay__ {
+//			reg = <0>;
+//		};
+//	};
 
-	fragment@1001 {
-		target = <&emmc2bus>;
-		__overlay__ {
-			dma-ranges = <0x00000000 0x00000000 0x00000000 0x00000000 0xfc000000>;
-			status = "okay";
-		};
-	};
+//	fragment@1001 {
+//		target = <&emmc2bus>;
+//		__overlay__ {
+//			dma-ranges = <0x00000000 0x00000000 0x00000000 0x00000000 0xfc000000>;
+//			status = "okay";
+//		};
+//	};
 
 //	fragment@1002 {
 //		target-path = "/";
@@ -310,26 +310,26 @@
 //		};
 //	};
 
-	fragment@1005 {
-		taget = <&pcie0>;
-		__overlay__ {
-			compatible = "brcm,bcm2711-pcie", "brcm,bcm7445-pcie";
-			dma-ranges = <0x02000000 0x00000004 0x00000000 0x00000000 0x00000000 0x00000001 0x00000000>;
-		};
-	};
+//	fragment@1005 {
+//		taget = <&pcie0>;
+//		__overlay__ {
+//			compatible = "brcm,bcm2711-pcie", "brcm,bcm7445-pcie";
+//			dma-ranges = <0x02000000 0x00000004 0x00000000 0x00000000 0x00000000 0x00000001 0x00000000>;
+//		};
+//	};
 
 	/* cma-overlay.dts */
-	fragment@2000 {
-		target = <&cma>;
-		__overlay__ {
-			/*
-			 * The default size when using this overlay is 256 MB
-			 * and should be kept as is for backwards
-			 * compatibility.
-			 */
-			size = <0x10000000>;
-		};
-	};
+//	fragment@2000 {
+//		target = <&cma>;
+//		__overlay__ {
+//			/*
+//			 * The default size when using this overlay is 256 MB
+//			 * and should be kept as is for backwards
+//			 * compatibility.
+//			 */
+//			size = <0x10000000>;
+//		};
+//	};
 
 	fragment@3002 {
 		target = <&fb>;
@@ -407,54 +407,54 @@
 	};
 
 	/* dwc2-overlay.dts */
-	fragment@4000 {
-		target = <&usb>;
-		__overlay__ {
-			#address-cells = <1>;
-			#size-cells = <1>;
-			compatible = "brcm,bcm2835-usb";
-			dr_mode = "otg";
-			g-np-tx-fifo-size = <32>;
-			g-rx-fifo-size = <558>;
-			g-tx-fifo-size = <512 512 512 512 512 256 256>;
-			status = "okay";
-		};
-	};
+//	fragment@4000 {
+//		target = <&usb>;
+//		__overlay__ {
+//			#address-cells = <1>;
+//			#size-cells = <1>;
+//			compatible = "brcm,bcm2835-usb";
+//			dr_mode = "otg";
+//			g-np-tx-fifo-size = <32>;
+//			g-rx-fifo-size = <558>;
+//			g-tx-fifo-size = <512 512 512 512 512 256 256>;
+//			status = "okay";
+//		};
+//	};
 
 	/* disable-bt-overlay.dts */
-	fragment@5000 {
-		target = <&uart0>;
-		__overlay__ {
-			pinctrl-names = "default";
-			pinctrl-0 = <&uart0_pins>;
-			status = "okay";
-		};
-	};
+//	fragment@5000 {
+//		target = <&uart0>;
+//		__overlay__ {
+//			pinctrl-names = "default";
+//			pinctrl-0 = <&uart0_pins>;
+//			status = "okay";
+//		};
+//	};
 
-	fragment@5001 {
-		target = <&bt>;
-		__overlay__ {
-			status = "disabled";
-		};
-	};
+//	fragment@5001 {
+//		target = <&bt>;
+//		__overlay__ {
+//			status = "disabled";
+//		};
+//	};
 
-	fragment@5002 {
-		target = <&uart0_pins>;
-		__overlay__ {
-			brcm,pins;
-			brcm,function;
-			brcm,pull;
-		};
-	};
+//	fragment@5002 {
+//		target = <&uart0_pins>;
+//		__overlay__ {
+//			brcm,pins;
+//			brcm,function;
+//			brcm,pull;
+//		};
+//	};
 
-	fragment@5003 {
-		target = <&bt_pins>;
-		__overlay__ {
-			brcm,pins;
-			brcm,function;
-			brcm,pull;
-		};
-	};
+//	fragment@5003 {
+//		target = <&bt_pins>;
+//		__overlay__ {
+//			brcm,pins;
+//			brcm,function;
+//			brcm,pull;
+//		};
+//	};
 
 //	fragment@5004 {
 //		target-path = "/aliases";
@@ -474,17 +474,17 @@
 //		i2c_vc = [00 00 00 10 73 74 61 74 75 73 00 00 00 00 34 73 74 61 74 75 73 00];
 
 		/* cma-overlay.dts */
-		cma-512 = <&cma>,"size:0=",<0x20000000>;
-		cma-448 = <&cma>,"size:0=",<0x1c000000>;
-		cma-384 = <&cma>,"size:0=",<0x18000000>;
-		cma-320 = <&cma>,"size:0=",<0x14000000>;
-		cma-256 = <&cma>,"size:0=",<0x10000000>;
-		cma-192 = <&cma>,"size:0=",<0xC000000>;
-		cma-128 = <&cma>,"size:0=",<0x8000000>;
-		cma-96  = <&cma>,"size:0=",<0x6000000>;
-		cma-64  = <&cma>,"size:0=",<0x4000000>;
-		cma-size = <&cma>,"size:0"; /* in bytes, 4MB aligned */
-		cma-default = <0>,"-0";
+//		cma-512 = <&cma>,"size:0=",<0x20000000>;
+//		cma-448 = <&cma>,"size:0=",<0x1c000000>;
+//		cma-384 = <&cma>,"size:0=",<0x18000000>;
+//		cma-320 = <&cma>,"size:0=",<0x14000000>;
+//		cma-256 = <&cma>,"size:0=",<0x10000000>;
+//		cma-192 = <&cma>,"size:0=",<0xC000000>;
+//		cma-128 = <&cma>,"size:0=",<0x8000000>;
+//		cma-96  = <&cma>,"size:0=",<0x6000000>;
+//		cma-64  = <&cma>,"size:0=",<0x4000000>;
+//		cma-size = <&cma>,"size:0"; /* in bytes, 4MB aligned */
+//		cma-default = <0>,"-0";
 
 		/* vc4-kms-v3d.dts */
 //		audio   = <0>,"!13", <0>,"=14";
