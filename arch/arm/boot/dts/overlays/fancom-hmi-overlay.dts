@@ -407,19 +407,19 @@
 	};
 
 	/* dwc2-overlay.dts */
-	fragment@4000 {
-		target = <&usb>;
-		__overlay__ {
-			#address-cells = <1>;
-			#size-cells = <1>;
-			compatible = "brcm,bcm2835-usb";
-			dr_mode = "otg";
-			g-np-tx-fifo-size = <32>;
-			g-rx-fifo-size = <558>;
-			g-tx-fifo-size = <512 512 512 512 512 256 256>;
-			status = "okay";
-		};
-	};
+//	fragment@4000 {
+//		target = <&usb>;
+//		__overlay__ {
+//			#address-cells = <1>;
+//			#size-cells = <1>;
+//			compatible = "brcm,bcm2835-usb";
+//			dr_mode = "otg";
+//			g-np-tx-fifo-size = <32>;
+//			g-rx-fifo-size = <558>;
+//			g-tx-fifo-size = <512 512 512 512 512 256 256>;
+//			status = "okay";
+//		};
+//	};
 
 	/* disable-bt-overlay.dts */
 	fragment@5000 {
@@ -493,8 +493,8 @@
 		nocomposite = <0>, "!11";
 
 		/* dwc2-overlay.dts */
-		dr_mode = <&usb>, "dr_mode";
-		g-np-tx-fifo-size = <&usb>,"g-np-tx-fifo-size:0";
-		g-rx-fifo-size = <&usb>,"g-rx-fifo-size:0";
+//		dr_mode = <&usb>, "dr_mode";
+//		g-np-tx-fifo-size = <&usb>,"g-np-tx-fifo-size:0";
+//		g-rx-fifo-size = <&usb>,"g-rx-fifo-size:0";
 	};
 };
