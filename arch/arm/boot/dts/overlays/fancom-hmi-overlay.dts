@@ -56,10 +56,10 @@
 		__overlay__ {
 			// Becahse RPI does stupid stuff
 			memreserve = <0x30000000 0x10000000>;
-			system {
-				linux,serial = <0x10000000 0xf00bef2c>;
-				linux,revision = <0x00c03140>;
-			};
+//			system {
+//				linux,serial = <0x10000000 0xf00bef2c>;
+//				linux,revision = <0x00c03140>;
+//			};
 
 			axi {
 				vc_mem {
@@ -456,23 +456,22 @@
 		};
 	};
 
-	fragment@5004 {
-		target-path = "/aliases";
-		__overlay__ {
-			serial0 = "/soc/serial@7e201000";
-			serial1 = "/soc/serial@7e215040";
-		};
-	};
+//	fragment@5004 {
+//		target-path = "/aliases";
+//		__overlay__ {
+//			serial0 = "/soc/serial@7e201000";
+//			serial1 = "/soc/serial@7e215040";
+//		};
+//	};
 
 	__overrides__ {
-
 		/* Because RPI does stupid stuff. */
-		i2c_arm_baudrate = [00 00 00 35 63 6c 6f 63 6b 2d 66 72 65 71 75 65 6e 63 79 3a 30 00];
-		i2c_baudrate = [00 00 00 35 63 6c 6f 63 6b 2d 66 72 65 71 75 65 6e 63 79 3a 30 00];
-		i2c_arm = [00 00 00 35 73 74 61 74 75 73 00];
-		i2c = [00 00 00 35 73 74 61 74 75 73 00];
-		i2c_vc_baudrate = [00 00 00 10 63 6c 6f 63 6b 2d 66 72 65 71 75 65 6e 63 79 3a 30 00];
-		i2c_vc = [00 00 00 10 73 74 61 74 75 73 00 00 00 00 34 73 74 61 74 75 73 00];
+//		i2c_arm_baudrate = [00 00 00 35 63 6c 6f 63 6b 2d 66 72 65 71 75 65 6e 63 79 3a 30 00];
+//		i2c_baudrate = [00 00 00 35 63 6c 6f 63 6b 2d 66 72 65 71 75 65 6e 63 79 3a 30 00];
+//		i2c_arm = [00 00 00 35 73 74 61 74 75 73 00];
+//		i2c = [00 00 00 35 73 74 61 74 75 73 00];
+//		i2c_vc_baudrate = [00 00 00 10 63 6c 6f 63 6b 2d 66 72 65 71 75 65 6e 63 79 3a 30 00];
+//		i2c_vc = [00 00 00 10 73 74 61 74 75 73 00 00 00 00 34 73 74 61 74 75 73 00];
 
 		/* cma-overlay.dts */
 		cma-512 = <&cma>,"size:0=",<0x20000000>;
@@ -488,13 +487,13 @@
 		cma-default = <0>,"-0";
 
 		/* vc4-kms-v3d.dts */
-		audio   = <0>,"!13", <0>,"=14";
-		noaudio = <0>,"=13", <0>,"!14";
-		nocomposite = <0>, "!11";
+//		audio   = <0>,"!13", <0>,"=14";
+//		noaudio = <0>,"=13", <0>,"!14";
+//		nocomposite = <0>, "!11";
 
-		/* dwc2-overlay.dts */
-		dr_mode = <&usb>, "dr_mode";
-		g-np-tx-fifo-size = <&usb>,"g-np-tx-fifo-size:0";
-		g-rx-fifo-size = <&usb>,"g-rx-fifo-size:0";
+//		/* dwc2-overlay.dts */
+//		dr_mode = <&usb>, "dr_mode";
+//		g-np-tx-fifo-size = <&usb>,"g-np-tx-fifo-size:0";
+//		g-rx-fifo-size = <&usb>,"g-rx-fifo-size:0";
 	};
 };
