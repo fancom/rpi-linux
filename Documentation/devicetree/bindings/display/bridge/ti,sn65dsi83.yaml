@@ -19,14 +19,14 @@ description: |
 
 properties:
   compatible:
-    oneOf:
-      - const: ti,sn65dsi83
-      - const: ti,sn65dsi84
+    enum:
+      - ti,sn65dsi83
+      - ti,sn65dsi84
 
   reg:
-    oneOf:
-      - const: 0x2c
-      - const: 0x2d
+    enum:
+      - 0x2c
+      - 0x2d
 
   enable-gpios:
     maxItems: 1
@@ -37,19 +37,19 @@ properties:
 
     properties:
       port@0:
-        $ref: /schemas/graph.yaml#/properties/port
+        $ref: /schemas/graph.yaml#/$defs/port-base
+        unevaluatedProperties: false
         description: Video port for MIPI DSI Channel-A input
 
         properties:
           endpoint:
-            $ref: /schemas/graph.yaml#/$defs/endpoint-base
+            $ref: /schemas/media/video-interfaces.yaml#
             unevaluatedProperties: false
 
             properties:
               data-lanes:
                 description: array of physical DSI data lane indexes.
                 minItems: 1
-                maxItems: 4
                 items:
                   - const: 1
                   - const: 2
@@ -57,19 +57,19 @@ properties:
                   - const: 4
 
       port@1:
-        $ref: /schemas/graph.yaml#/properties/port
+        $ref: /schemas/graph.yaml#/$defs/port-base
+        unevaluatedProperties: false
         description: Video port for MIPI DSI Channel-B input
 
         properties:
           endpoint:
-            $ref: /schemas/graph.yaml#/$defs/endpoint-base
+            $ref: /schemas/media/video-interfaces.yaml#
             unevaluatedProperties: false
 
             properties:
               data-lanes:
                 description: array of physical DSI data lane indexes.
                 minItems: 1
-                maxItems: 4
                 items:
                   - const: 1
                   - const: 2
@@ -80,21 +80,9 @@ properties:
         $ref: /schemas/graph.yaml#/properties/port
         description: Video port for LVDS Channel-A output (panel or bridge).
 
-        properties:
-          endpoint:
-            $ref: /schemas/graph.yaml#/$defs/endpoint-base
-            description: LVDS Channel-A output endpoint
-            unevaluatedProperties: false
-
       port@3:
         $ref: /schemas/graph.yaml#/properties/port
         description: Video port for LVDS Channel-B output (panel or bridge).
-
-        properties:
-          endpoint:
-            $ref: /schemas/graph.yaml#/$defs/endpoint-base
-            description: LVDS Channel-B output endpoint
-            unevaluatedProperties: false
 
     required:
       - port@0

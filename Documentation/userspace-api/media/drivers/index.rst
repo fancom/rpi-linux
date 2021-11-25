@@ -31,7 +31,9 @@ For more details see the file COPYING in the source distribution of Linux.
 	:maxdepth: 5
 	:numbered:
 
+	ccs
 	cx2341x-uapi
+        hantro
 	imx-uapi
 	bcm2835-isp
 	max2175

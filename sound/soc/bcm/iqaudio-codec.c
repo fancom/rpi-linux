@@ -178,9 +178,9 @@ static struct snd_soc_dai_link snd_rpi_iqaudio_codec_dai[] = {
 				  SND_SOC_DAIFMT_CBM_CFM,
 	.init			= snd_rpi_iqaudio_codec_init,
 	.ops			= &snd_rpi_iqaudio_codec_ops,
-	.symmetric_rates	= 1,
+	.symmetric_rate	= 1,
 	.symmetric_channels	= 1,
-	.symmetric_samplebits	= 1,
+	.symmetric_sample_bits	= 1,
 	SND_SOC_DAILINK_REG(rpi_iqaudio),
 },
 };

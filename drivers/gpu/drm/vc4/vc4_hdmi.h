@@ -111,17 +111,10 @@ struct vc4_hdmi_audio {
 	struct snd_soc_dai_link_component cpu;
 	struct snd_soc_dai_link_component codec;
 	struct snd_soc_dai_link_component platform;
-	int samplerate;
-	int channels;
 	struct snd_dmaengine_dai_dma_data dma_data;
-	struct snd_pcm_substream *substream;
-
+	struct hdmi_audio_infoframe infoframe;
+	struct platform_device *codec_pdev;
 	bool streaming;
-
-	unsigned char iec_status[4];
-	const struct snd_pcm_chmap_elem *chmap;
-	unsigned int chmap_idx;
-	unsigned int max_channels;
 };
 
 /* General HDMI hardware state. */
@@ -133,6 +126,8 @@ struct vc4_hdmi {
 
 	struct vc4_hdmi_encoder encoder;
 	struct drm_connector connector;
+
+	struct delayed_work scrambling_work;
 
 	struct i2c_adapter *ddc;
 	void __iomem *hdmicore_regs;
@@ -151,8 +146,7 @@ struct vc4_hdmi {
 	/* VC5 Only */
 	void __iomem *rm_regs;
 
-	int hpd_gpio;
-	bool hpd_active_low;
+	struct gpio_desc *hpd_gpio;
 
 	/*
 	 * On some systems (like the RPi4), some modes are in the same
@@ -183,12 +177,46 @@ struct vc4_hdmi {
 
 	struct reset_control *reset;
 
-	struct clk_request *bvb_req;
-	struct clk_request *hsm_req;
-
-	/* Common debugfs regset */
 	struct debugfs_regset32 hdmi_regset;
 	struct debugfs_regset32 hd_regset;
+
+	/**
+	 * @hw_lock: Spinlock protecting device register access.
+	 */
+	spinlock_t hw_lock;
+
+	/**
+	 * @mutex: Mutex protecting the driver access across multiple
+	 * frameworks (KMS, ALSA).
+	 *
+	 * NOTE: While supported, CEC has been left out since
+	 * cec_s_phys_addr_from_edid() might call .adap_enable and lead to a
+	 * reentrancy issue between .get_modes (or .detect) and .adap_enable.
+	 * Since we don't share any state between the CEC hooks and KMS', it's
+	 * not a big deal. The only trouble might come from updating the CEC
+	 * clock divider which might be affected by a modeset, but CEC should
+	 * be resilient to that.
+	 */
+	struct mutex mutex;
+
+	/**
+	 * @saved_adjusted_mode: Copy of @drm_crtc_state.adjusted_mode
+	 * for use by ALSA hooks and interrupt handlers. Protected by @mutex.
+	 */
+	struct drm_display_mode saved_adjusted_mode;
+
+	/**
+	 * @output_enabled: Is the HDMI controller currently active?
+	 * Protected by @mutex.
+	 */
+	bool output_enabled;
+
+	/**
+	 * @scdc_enabled: Is the HDMI controller currently running with
+	 * the scrambler on? Protected by @mutex.
+	 */
+	bool scdc_enabled;
+
 	/* VC5 debugfs regset */
 	struct debugfs_regset32 cec_regset;
 	struct debugfs_regset32 csc_regset;

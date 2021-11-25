@@ -25,6 +25,7 @@
 #include <media/media-entity.h>
 #include <media/v4l2-async.h>
 #include <media/v4l2-ctrls.h>
+#include <media/v4l2-fwnode.h>
 #include <media/v4l2-subdev.h>
 
 #define OV9281_LINK_FREQ_400MHZ		400000000
@@ -491,7 +492,7 @@ ov9281_find_best_fit(struct v4l2_subdev_format *fmt)
 }
 
 static int ov9281_set_fmt(struct v4l2_subdev *sd,
-			  struct v4l2_subdev_pad_config *cfg,
+			  struct v4l2_subdev_state *sd_state,
 			  struct v4l2_subdev_format *fmt)
 {
 	struct ov9281 *ov9281 = to_ov9281(sd);
@@ -506,7 +507,7 @@ static int ov9281_set_fmt(struct v4l2_subdev *sd,
 	fmt->format.width = mode->width;
 	fmt->format.height = mode->height;
 	fmt->format.field = V4L2_FIELD_NONE;
-	fmt->format.colorspace = V4L2_COLORSPACE_SRGB;
+	fmt->format.colorspace = V4L2_COLORSPACE_RAW;
 	fmt->format.ycbcr_enc =
 			V4L2_MAP_YCBCR_ENC_DEFAULT(fmt->format.colorspace);
 	fmt->format.quantization =
@@ -516,7 +517,7 @@ static int ov9281_set_fmt(struct v4l2_subdev *sd,
 		V4L2_MAP_XFER_FUNC_DEFAULT(fmt->format.colorspace);
 
 	if (fmt->which == V4L2_SUBDEV_FORMAT_TRY) {
-		*v4l2_subdev_get_try_format(sd, cfg, fmt->pad) = fmt->format;
+		*v4l2_subdev_get_try_format(sd, sd_state, fmt->pad) = fmt->format;
 	} else {
 		ov9281->cur_mode = mode;
 		ov9281->code = fmt->format.code;
@@ -542,7 +543,7 @@ static int ov9281_set_fmt(struct v4l2_subdev *sd,
 }
 
 static int ov9281_get_fmt(struct v4l2_subdev *sd,
-			  struct v4l2_subdev_pad_config *cfg,
+			  struct v4l2_subdev_state *sd_state,
 			  struct v4l2_subdev_format *fmt)
 {
 	struct ov9281 *ov9281 = to_ov9281(sd);
@@ -550,13 +551,14 @@ static int ov9281_get_fmt(struct v4l2_subdev *sd,
 
 	mutex_lock(&ov9281->mutex);
 	if (fmt->which == V4L2_SUBDEV_FORMAT_TRY) {
-		fmt->format = *v4l2_subdev_get_try_format(sd, cfg, fmt->pad);
+		fmt->format = *v4l2_subdev_get_try_format(sd, sd_state,
+							  fmt->pad);
 	} else {
 		fmt->format.width = mode->width;
 		fmt->format.height = mode->height;
 		fmt->format.code = ov9281->code;
 		fmt->format.field = V4L2_FIELD_NONE;
-		fmt->format.colorspace = V4L2_COLORSPACE_SRGB;
+		fmt->format.colorspace = V4L2_COLORSPACE_RAW;
 		fmt->format.ycbcr_enc =
 			V4L2_MAP_YCBCR_ENC_DEFAULT(fmt->format.colorspace);
 		fmt->format.quantization =
@@ -572,7 +574,7 @@ static int ov9281_get_fmt(struct v4l2_subdev *sd,
 }
 
 static int ov9281_enum_mbus_code(struct v4l2_subdev *sd,
-				 struct v4l2_subdev_pad_config *cfg,
+				 struct v4l2_subdev_state *sd_state,
 				 struct v4l2_subdev_mbus_code_enum *code)
 {
 	switch (code->index) {
@@ -590,7 +592,7 @@ static int ov9281_enum_mbus_code(struct v4l2_subdev *sd,
 }
 
 static int ov9281_enum_frame_sizes(struct v4l2_subdev *sd,
-				   struct v4l2_subdev_pad_config *cfg,
+				   struct v4l2_subdev_state *sd_state,
 				   struct v4l2_subdev_frame_size_enum *fse)
 {
 	if (fse->index >= ARRAY_SIZE(supported_modes))
@@ -658,12 +660,14 @@ static int ov9281_set_ctrl_vflip(struct ov9281 *ov9281, int value)
 }
 
 static const struct v4l2_rect *
-__ov9281_get_pad_crop(struct ov9281 *ov9281, struct v4l2_subdev_pad_config *cfg,
+__ov9281_get_pad_crop(struct ov9281 *ov9281,
+		      struct v4l2_subdev_state *sd_state,
 		      unsigned int pad, enum v4l2_subdev_format_whence which)
 {
 	switch (which) {
 	case V4L2_SUBDEV_FORMAT_TRY:
-		return v4l2_subdev_get_try_crop(&ov9281->subdev, cfg, pad);
+		return v4l2_subdev_get_try_crop(&ov9281->subdev, sd_state,
+						pad);
 	case V4L2_SUBDEV_FORMAT_ACTIVE:
 		return &ov9281->cur_mode->crop;
 	}
@@ -672,7 +676,7 @@ __ov9281_get_pad_crop(struct ov9281 *ov9281, struct v4l2_subdev_pad_config *cfg,
 }
 
 static int ov9281_get_selection(struct v4l2_subdev *sd,
-				struct v4l2_subdev_pad_config *cfg,
+				struct v4l2_subdev_state *sd_state,
 				struct v4l2_subdev_selection *sel)
 {
 	switch (sel->target) {
@@ -680,7 +684,7 @@ static int ov9281_get_selection(struct v4l2_subdev *sd,
 		struct ov9281 *ov9281 = to_ov9281(sd);
 
 		mutex_lock(&ov9281->mutex);
-		sel->r = *__ov9281_get_pad_crop(ov9281, cfg, sel->pad,
+		sel->r = *__ov9281_get_pad_crop(ov9281, sd_state, sel->pad,
 						sel->which);
 		mutex_unlock(&ov9281->mutex);
 
@@ -898,7 +902,7 @@ static int ov9281_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 {
 	struct ov9281 *ov9281 = to_ov9281(sd);
 	struct v4l2_mbus_framefmt *try_fmt =
-				v4l2_subdev_get_try_format(sd, fh->pad, 0);
+				v4l2_subdev_get_try_format(sd, fh->state, 0);
 	const struct ov9281_mode *def_mode = &supported_modes[0];
 
 	mutex_lock(&ov9281->mutex);
@@ -907,7 +911,7 @@ static int ov9281_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 	try_fmt->height = def_mode->height;
 	try_fmt->code = MEDIA_BUS_FMT_Y10_1X10;
 	try_fmt->field = V4L2_FIELD_NONE;
-	try_fmt->colorspace = V4L2_COLORSPACE_SRGB;
+	try_fmt->colorspace = V4L2_COLORSPACE_RAW;
 	try_fmt->ycbcr_enc = V4L2_MAP_YCBCR_ENC_DEFAULT(try_fmt->colorspace);
 	try_fmt->quantization =
 		V4L2_MAP_QUANTIZATION_DEFAULT(true, try_fmt->colorspace,
@@ -1020,6 +1024,7 @@ static const struct v4l2_ctrl_ops ov9281_ctrl_ops = {
 
 static int ov9281_initialize_controls(struct ov9281 *ov9281)
 {
+	struct v4l2_fwnode_device_properties props;
 	const struct ov9281_mode *mode;
 	struct v4l2_ctrl_handler *handler;
 	struct v4l2_ctrl *ctrl;
@@ -1029,7 +1034,7 @@ static int ov9281_initialize_controls(struct ov9281 *ov9281)
 
 	handler = &ov9281->ctrl_handler;
 	mode = ov9281->cur_mode;
-	ret = v4l2_ctrl_handler_init(handler, 9);
+	ret = v4l2_ctrl_handler_init(handler, 11);
 	if (ret)
 		return ret;
 	handler->lock = &ov9281->mutex;
@@ -1090,6 +1095,15 @@ static int ov9281_initialize_controls(struct ov9281 *ov9281)
 			"Failed to init controls(%d)\n", ret);
 		goto err_free_handler;
 	}
+
+	ret = v4l2_fwnode_device_parse(&ov9281->client->dev, &props);
+	if (ret)
+		goto err_free_handler;
+
+	ret = v4l2_ctrl_new_fwnode_properties(handler, &ov9281_ctrl_ops,
+					      &props);
+	if (ret)
+		goto err_free_handler;
 
 	ov9281->subdev.ctrl_handler = handler;
 
@@ -1197,9 +1211,7 @@ static int ov9281_probe(struct i2c_client *client,
 	if (ret < 0)
 		goto err_power_off;
 
-	snprintf(sd->name, sizeof(sd->name), "m%s %s",
-		 OV9281_NAME, dev_name(sd->dev));
-	ret = v4l2_async_register_subdev_sensor_common(sd);
+	ret = v4l2_async_register_subdev_sensor(sd);
 	if (ret) {
 		dev_err(dev, "v4l2 async register subdev failed\n");
 		goto err_clean_entity;

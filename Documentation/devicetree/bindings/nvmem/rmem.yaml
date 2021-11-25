@@ -16,7 +16,7 @@ properties:
   compatible:
     items:
       - enum:
-        - raspberrypi,bootloader-config
+          - raspberrypi,bootloader-config
       - const: nvmem-rmem
 
   no-map:

@@ -30,11 +30,14 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 
+#include <drm/drm_aperture.h>
 #include <drm/drm_atomic_helper.h>
 #include <drm/drm_drv.h>
 #include <drm/drm_fb_cma_helper.h>
 #include <drm/drm_fb_helper.h>
 #include <drm/drm_vblank.h>
+
+#include <soc/bcm2835/raspberrypi-firmware.h>
 
 #include "uapi/drm/vc4_drm.h"
 
@@ -56,10 +59,8 @@ void __iomem *vc4_ioremap_regs(struct platform_device *dev, int index)
 
 	res = platform_get_resource(dev, IORESOURCE_MEM, index);
 	map = devm_ioremap_resource(&dev->dev, res);
-	if (IS_ERR(map)) {
-		DRM_ERROR("Failed to map registers: %ld\n", PTR_ERR(map));
+	if (IS_ERR(map))
 		return map;
-	}
 
 	return map;
 }
@@ -140,23 +141,7 @@ static void vc4_close(struct drm_device *dev, struct drm_file *file)
 	kfree(vc4file);
 }
 
-static const struct vm_operations_struct vc4_vm_ops = {
-	.fault = vc4_fault,
-	.open = drm_gem_vm_open,
-	.close = drm_gem_vm_close,
-};
-
-static const struct file_operations vc4_drm_fops = {
-	.owner = THIS_MODULE,
-	.open = drm_open,
-	.release = drm_release,
-	.unlocked_ioctl = drm_ioctl,
-	.mmap = vc4_mmap,
-	.poll = drm_poll,
-	.read = drm_read,
-	.compat_ioctl = drm_compat_ioctl,
-	.llseek = noop_llseek,
-};
+DEFINE_DRM_GEM_FOPS(vc4_drm_fops);
 
 static const struct drm_ioctl_desc vc4_drm_ioctls[] = {
 	DRM_IOCTL_DEF_DRV(VC4_SUBMIT_CL, vc4_submit_cl_ioctl, DRM_RENDER_ALLOW),
@@ -185,29 +170,14 @@ static struct drm_driver vc4_drm_driver = {
 			    DRIVER_SYNCOBJ),
 	.open = vc4_open,
 	.postclose = vc4_close,
-	.irq_handler = vc4_irq,
-	.irq_preinstall = vc4_irq_preinstall,
-	.irq_postinstall = vc4_irq_postinstall,
-	.irq_uninstall = vc4_irq_uninstall,
 
 #if defined(CONFIG_DEBUG_FS)
 	.debugfs_init = vc4_debugfs_init,
 #endif
 
 	.gem_create_object = vc4_create_object,
-	.gem_free_object_unlocked = vc4_free_object,
-	.gem_vm_ops = &vc4_vm_ops,
 
-	.prime_handle_to_fd = drm_gem_prime_handle_to_fd,
-	.prime_fd_to_handle = drm_gem_prime_fd_to_handle,
-	.gem_prime_export = vc4_prime_export,
-	.gem_prime_get_sg_table	= drm_gem_cma_prime_get_sg_table,
-	.gem_prime_import_sg_table = vc4_prime_import_sg_table,
-	.gem_prime_vmap = vc4_prime_vmap,
-	.gem_prime_vunmap = drm_gem_cma_prime_vunmap,
-	.gem_prime_mmap = vc4_prime_mmap,
-
-	.dumb_create = vc4_dumb_create,
+	DRM_GEM_CMA_DRIVER_OPS_WITH_DUMB_CREATE(vc4_dumb_create),
 
 	.ioctls = vc4_drm_ioctls,
 	.num_ioctls = ARRAY_SIZE(vc4_drm_ioctls),
@@ -224,40 +194,6 @@ static struct drm_driver vc4_drm_driver = {
 static int compare_dev(struct device *dev, void *data)
 {
 	return dev == data;
-}
-
-static struct drm_crtc *vc4_drv_find_crtc(struct drm_device *drm,
-					  struct drm_encoder *encoder)
-{
-	struct drm_crtc *crtc;
-	if (WARN_ON(hweight32(encoder->possible_crtcs) != 1))
-		return NULL;
-
-	drm_for_each_crtc(crtc, drm) {
-		if (!drm_encoder_crtc_ok(encoder, crtc))
-			continue;
-
-		return crtc;
-	}
-
-	return NULL;
-}
-
-static void vc4_drv_set_encoder_data(struct drm_device *drm)
-{
-	struct drm_encoder *encoder;
-
-	drm_for_each_encoder(encoder, drm) {
-		struct vc4_encoder *vc4_encoder;
-		struct drm_crtc *crtc;
-
-		crtc = vc4_drv_find_crtc(drm, encoder);
-		if (WARN_ON(!crtc))
-			return;
-
-		vc4_encoder = to_vc4_encoder(encoder);
-		vc4_encoder->crtc = crtc;
-	}
 }
 
 static void vc4_match_add_drivers(struct device *dev,
@@ -289,6 +225,18 @@ const struct of_device_id vc4_dma_range_matches[] = {
 	{ .compatible = "brcm,vc4-v3d" },
 	{}
 };
+
+/*
+ * we need this helper function for determining presence of fkms
+ * before it's been bound
+ */
+static bool firmware_kms(void)
+{
+	return of_device_is_available(of_find_compatible_node(NULL, NULL,
+	       "raspberrypi,rpi-firmware-kms")) ||
+	       of_device_is_available(of_find_compatible_node(NULL, NULL,
+	       "raspberrypi,rpi-firmware-kms-2711"));
+}
 
 static int vc4_drm_bind(struct device *dev)
 {
@@ -339,18 +287,36 @@ static int vc4_drm_bind(struct device *dev)
 	if (ret)
 		return ret;
 
+	node = of_parse_phandle(dev->of_node, "raspberrypi,firmware", 0);
+	if (node) {
+		vc4->firmware = rpi_firmware_get(node);
+		of_node_put(node);
+
+		if (!vc4->firmware)
+			return -EPROBE_DEFER;
+	}
+
+	ret = drm_aperture_remove_framebuffers(false, &vc4_drm_driver);
+	if (ret)
+		return ret;
+
+	if (vc4->firmware && !firmware_kms()) {
+		ret = rpi_firmware_property(vc4->firmware,
+					    RPI_FIRMWARE_NOTIFY_DISPLAY_DONE,
+					    NULL, 0);
+		if (ret)
+			drm_warn(drm, "Couldn't stop firmware display driver: %d\n", ret);
+	}
+
 	ret = component_bind_all(dev, drm);
 	if (ret)
 		return ret;
-	vc4_drv_set_encoder_data(drm);
 
 	if (!vc4->firmware_kms) {
 		ret = vc4_plane_create_additional_planes(drm);
 		if (ret)
 			goto unbind_all;
 	}
-
-	drm_fb_helper_remove_conflicting_framebuffers(NULL, "vc4drmfb", false);
 
 	ret = vc4_kms_load(drm);
 	if (ret < 0)
@@ -365,8 +331,7 @@ static int vc4_drm_bind(struct device *dev)
 	if (ret < 0)
 		goto unbind_all;
 
-	//drm_fbdev_generic_setup(drm, 16);
-	drm_fbdev_generic_setup(drm, 32);
+	drm_fbdev_generic_setup(drm, 16);
 
 	return 0;
 

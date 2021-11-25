@@ -811,11 +811,10 @@ static int bcm2835_pll_divider_is_on(struct clk_hw *hw)
 	return !(cprman_read(cprman, data->a2w_reg) & A2W_PLL_CHANNEL_DISABLE);
 }
 
-static long bcm2835_pll_divider_round_rate(struct clk_hw *hw,
-					   unsigned long rate,
-					   unsigned long *parent_rate)
+static int bcm2835_pll_divider_determine_rate(struct clk_hw *hw,
+					      struct clk_rate_request *req)
 {
-	return clk_divider_ops.round_rate(hw, rate, parent_rate);
+	return clk_divider_ops.determine_rate(hw, req);
 }
 
 static unsigned long bcm2835_pll_divider_get_rate(struct clk_hw *hw,
@@ -907,7 +906,7 @@ static const struct clk_ops bcm2835_pll_divider_clk_ops = {
 	.unprepare = bcm2835_pll_divider_off,
 	.recalc_rate = bcm2835_pll_divider_get_rate,
 	.set_rate = bcm2835_pll_divider_set_rate,
-	.round_rate = bcm2835_pll_divider_round_rate,
+	.determine_rate = bcm2835_pll_divider_determine_rate,
 	.debug_init = bcm2835_pll_divider_debug_init,
 };
 
@@ -939,8 +938,7 @@ static int bcm2835_clock_is_on(struct clk_hw *hw)
 
 static u32 bcm2835_clock_choose_div(struct clk_hw *hw,
 				    unsigned long rate,
-				    unsigned long parent_rate,
-				    bool round_up)
+				    unsigned long parent_rate)
 {
 	struct bcm2835_clock *clock = bcm2835_clock_from_hw(hw);
 	const struct bcm2835_clock_data *data = clock->data;
@@ -952,10 +950,6 @@ static u32 bcm2835_clock_choose_div(struct clk_hw *hw,
 
 	rem = do_div(temp, rate);
 	div = temp;
-
-	/* Round up and mask off the unused bits */
-	if (round_up && ((div & unused_frac_mask) != 0 || rem != 0))
-		div += unused_frac_mask + 1;
 	div &= ~unused_frac_mask;
 
 	/* different clamping limits apply for a mash clock */
@@ -1112,7 +1106,7 @@ static int bcm2835_clock_set_rate_and_parent(struct clk_hw *hw,
 	struct bcm2835_clock *clock = bcm2835_clock_from_hw(hw);
 	struct bcm2835_cprman *cprman = clock->cprman;
 	const struct bcm2835_clock_data *data = clock->data;
-	u32 div = bcm2835_clock_choose_div(hw, rate, parent_rate, false);
+	u32 div = bcm2835_clock_choose_div(hw, rate, parent_rate);
 	u32 ctl;
 
 	spin_lock(&cprman->regs_lock);
@@ -1178,7 +1172,7 @@ static unsigned long bcm2835_clock_choose_div_and_prate(struct clk_hw *hw,
 
 	if (!(BIT(parent_idx) & data->set_rate_parent)) {
 		*prate = clk_hw_get_rate(parent);
-		*div = bcm2835_clock_choose_div(hw, rate, *prate, true);
+		*div = bcm2835_clock_choose_div(hw, rate, *prate);
 
 		*avgrate = bcm2835_clock_rate_from_divisor(clock, *prate, *div);
 
@@ -1264,7 +1258,7 @@ static int bcm2835_clock_determine_rate(struct clk_hw *hw,
 		rate = bcm2835_clock_choose_div_and_prate(hw, i, req->rate,
 							  &div, &prate,
 							  &avgrate);
-		if (rate > best_rate && rate <= req->rate) {
+		if (abs(req->rate - rate) < abs(req->rate - best_rate)) {
 			best_parent = parent;
 			best_prate = prate;
 			best_rate = rate;
@@ -2214,21 +2208,6 @@ static const struct bcm2835_clk_desc clk_desc_array[] = {
 		.frac_bits = 12,
 		.tcnt_mux = 28),
 
-	/* TV encoder clock.  Only operating frequency is 108Mhz.  */
-	[BCM2835_CLOCK_VEC]	= REGISTER_PER_CLK(
-		SOC_ALL,
-		.name = "vec",
-		.ctl_reg = CM_VECCTL,
-		.div_reg = CM_VECDIV,
-		.int_bits = 4,
-		.frac_bits = 0,
-		/*
-		 * Allow rate change propagation only on PLLH_AUX which is
-		 * assigned index 7 in the parent array.
-		 */
-		.set_rate_parent = BIT(7),
-		.tcnt_mux = 29),
-
 	/* dsi clocks */
 	[BCM2835_CLOCK_DSI0E]	= REGISTER_PER_CLK(
 		SOC_ALL,
@@ -2345,7 +2324,7 @@ static int bcm2835_clk_probe(struct platform_device *pdev)
 
 	fw_node = of_parse_phandle(dev->of_node, "firmware", 0);
 	if (fw_node) {
-		struct rpi_firmware *fw = rpi_firmware_get(NULL);
+		struct rpi_firmware *fw = rpi_firmware_get(fw_node);
 		if (!fw)
 			return -EPROBE_DEFER;
 		cprman->fw = fw;

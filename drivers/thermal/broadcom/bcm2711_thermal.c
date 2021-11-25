@@ -52,7 +52,7 @@ static int bcm2711_get_temp(void *data, int *temp)
 	/* Convert a HW code to a temperature reading (millidegree celsius) */
 	t = slope * val + offset;
 
-	*temp = t < 0 ? 0 : t;
+	*temp = t;
 
 	return 0;
 }
@@ -102,11 +102,7 @@ static int bcm2711_thermal_probe(struct platform_device *pdev)
 	priv->thermal = thermal;
 
 	thermal->tzp->no_hwmon = false;
-	ret = thermal_add_hwmon_sysfs(thermal);
-	if (ret)
-		return ret;
-
-	return 0;
+	return thermal_add_hwmon_sysfs(thermal);
 }
 
 static struct platform_driver bcm2711_thermal_driver = {

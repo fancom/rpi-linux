@@ -898,7 +898,7 @@ static const struct v4l2_ctrl_ops ov7251_ctrl_ops = {
 };
 
 static int ov7251_enum_mbus_code(struct v4l2_subdev *sd,
-				 struct v4l2_subdev_pad_config *cfg,
+				 struct v4l2_subdev_state *sd_state,
 				 struct v4l2_subdev_mbus_code_enum *code)
 {
 	if (code->index > 0)
@@ -910,7 +910,7 @@ static int ov7251_enum_mbus_code(struct v4l2_subdev *sd,
 }
 
 static int ov7251_enum_frame_size(struct v4l2_subdev *subdev,
-				  struct v4l2_subdev_pad_config *cfg,
+				  struct v4l2_subdev_state *sd_state,
 				  struct v4l2_subdev_frame_size_enum *fse)
 {
 	if (fse->code != MEDIA_BUS_FMT_Y10_1X10)
@@ -928,7 +928,7 @@ static int ov7251_enum_frame_size(struct v4l2_subdev *subdev,
 }
 
 static int ov7251_enum_frame_ival(struct v4l2_subdev *subdev,
-				  struct v4l2_subdev_pad_config *cfg,
+				  struct v4l2_subdev_state *sd_state,
 				  struct v4l2_subdev_frame_interval_enum *fie)
 {
 	unsigned int index = fie->index;
@@ -950,13 +950,13 @@ static int ov7251_enum_frame_ival(struct v4l2_subdev *subdev,
 
 static struct v4l2_mbus_framefmt *
 __ov7251_get_pad_format(struct ov7251 *ov7251,
-			struct v4l2_subdev_pad_config *cfg,
+			struct v4l2_subdev_state *sd_state,
 			unsigned int pad,
 			enum v4l2_subdev_format_whence which)
 {
 	switch (which) {
 	case V4L2_SUBDEV_FORMAT_TRY:
-		return v4l2_subdev_get_try_format(&ov7251->sd, cfg, pad);
+		return v4l2_subdev_get_try_format(&ov7251->sd, sd_state, pad);
 	case V4L2_SUBDEV_FORMAT_ACTIVE:
 		return &ov7251->fmt;
 	default:
@@ -965,13 +965,14 @@ __ov7251_get_pad_format(struct ov7251 *ov7251,
 }
 
 static int ov7251_get_format(struct v4l2_subdev *sd,
-			     struct v4l2_subdev_pad_config *cfg,
+			     struct v4l2_subdev_state *sd_state,
 			     struct v4l2_subdev_format *format)
 {
 	struct ov7251 *ov7251 = to_ov7251(sd);
 
 	mutex_lock(&ov7251->lock);
-	format->format = *__ov7251_get_pad_format(ov7251, cfg, format->pad,
+	format->format = *__ov7251_get_pad_format(ov7251, sd_state,
+						  format->pad,
 						  format->which);
 	mutex_unlock(&ov7251->lock);
 
@@ -979,12 +980,13 @@ static int ov7251_get_format(struct v4l2_subdev *sd,
 }
 
 static struct v4l2_rect *
-__ov7251_get_pad_crop(struct ov7251 *ov7251, struct v4l2_subdev_pad_config *cfg,
+__ov7251_get_pad_crop(struct ov7251 *ov7251,
+		      struct v4l2_subdev_state *sd_state,
 		      unsigned int pad, enum v4l2_subdev_format_whence which)
 {
 	switch (which) {
 	case V4L2_SUBDEV_FORMAT_TRY:
-		return v4l2_subdev_get_try_crop(&ov7251->sd, cfg, pad);
+		return v4l2_subdev_get_try_crop(&ov7251->sd, sd_state, pad);
 	case V4L2_SUBDEV_FORMAT_ACTIVE:
 		return &ov7251->crop;
 	default:
@@ -1027,7 +1029,7 @@ ov7251_find_mode_by_ival(struct ov7251 *ov7251, struct v4l2_fract *timeperframe)
 }
 
 static int ov7251_set_format(struct v4l2_subdev *sd,
-			     struct v4l2_subdev_pad_config *cfg,
+			     struct v4l2_subdev_state *sd_state,
 			     struct v4l2_subdev_format *format)
 {
 	struct ov7251 *ov7251 = to_ov7251(sd);
@@ -1038,7 +1040,8 @@ static int ov7251_set_format(struct v4l2_subdev *sd,
 
 	mutex_lock(&ov7251->lock);
 
-	__crop = __ov7251_get_pad_crop(ov7251, cfg, format->pad, format->which);
+	__crop = __ov7251_get_pad_crop(ov7251, sd_state, format->pad,
+				       format->which);
 
 	new_mode = v4l2_find_nearest_size(ov7251_mode_info_data,
 				ARRAY_SIZE(ov7251_mode_info_data),
@@ -1077,7 +1080,7 @@ static int ov7251_set_format(struct v4l2_subdev *sd,
 		ov7251->current_mode = new_mode;
 	}
 
-	__format = __ov7251_get_pad_format(ov7251, cfg, format->pad,
+	__format = __ov7251_get_pad_format(ov7251, sd_state, format->pad,
 					   format->which);
 	__format->width = __crop->width;
 	__format->height = __crop->height;
@@ -1098,24 +1101,24 @@ exit:
 }
 
 static int ov7251_entity_init_cfg(struct v4l2_subdev *subdev,
-				  struct v4l2_subdev_pad_config *cfg)
+				  struct v4l2_subdev_state *sd_state)
 {
 	struct v4l2_subdev_format fmt = {
-		.which = cfg ? V4L2_SUBDEV_FORMAT_TRY
-			     : V4L2_SUBDEV_FORMAT_ACTIVE,
+		.which = sd_state ? V4L2_SUBDEV_FORMAT_TRY
+		: V4L2_SUBDEV_FORMAT_ACTIVE,
 		.format = {
 			.width = 640,
 			.height = 480
 		}
 	};
 
-	ov7251_set_format(subdev, cfg, &fmt);
+	ov7251_set_format(subdev, sd_state, &fmt);
 
 	return 0;
 }
 
 static int ov7251_get_selection(struct v4l2_subdev *sd,
-				struct v4l2_subdev_pad_config *cfg,
+				struct v4l2_subdev_state *sd_state,
 				struct v4l2_subdev_selection *sel)
 {
 	struct ov7251 *ov7251 = to_ov7251(sd);
@@ -1124,7 +1127,7 @@ static int ov7251_get_selection(struct v4l2_subdev *sd,
 		return -EINVAL;
 
 	mutex_lock(&ov7251->lock);
-	sel->r = *__ov7251_get_pad_crop(ov7251, cfg, sel->pad,
+	sel->r = *__ov7251_get_pad_crop(ov7251, sd_state, sel->pad,
 					sel->which);
 	mutex_unlock(&ov7251->lock);
 
@@ -1253,6 +1256,7 @@ static const struct v4l2_subdev_ops ov7251_subdev_ops = {
 
 static int ov7251_probe(struct i2c_client *client)
 {
+	struct v4l2_fwnode_device_properties props;
 	struct device *dev = &client->dev;
 	struct fwnode_handle *endpoint;
 	struct ov7251 *ov7251;
@@ -1338,7 +1342,7 @@ static int ov7251_probe(struct i2c_client *client)
 
 	mutex_init(&ov7251->lock);
 
-	v4l2_ctrl_handler_init(&ov7251->ctrls, 7);
+	v4l2_ctrl_handler_init(&ov7251->ctrls, 9);
 	ov7251->ctrls.lock = &ov7251->lock;
 
 	v4l2_ctrl_new_std(&ov7251->ctrls, &ov7251_ctrl_ops,
@@ -1373,6 +1377,15 @@ static int ov7251_probe(struct i2c_client *client)
 		ret = ov7251->ctrls.error;
 		goto free_ctrl;
 	}
+
+	ret = v4l2_fwnode_device_parse(&client->dev, &props);
+	if (ret)
+		goto free_ctrl;
+
+	ret = v4l2_ctrl_new_fwnode_properties(&ov7251->ctrls, &ov7251_ctrl_ops,
+					      &props);
+	if (ret)
+		goto free_ctrl;
 
 	v4l2_i2c_subdev_init(&ov7251->sd, client, &ov7251_subdev_ops);
 	ov7251->sd.flags |= V4L2_SUBDEV_FL_HAS_DEVNODE;

@@ -39,7 +39,14 @@ static struct vc4_ctm_state *to_vc4_ctm_state(struct drm_private_state *priv)
 
 struct vc4_hvs_state {
 	struct drm_private_state base;
-	unsigned int unassigned_channels;
+	unsigned long core_clock_rate;
+	struct clk_request *core_req;
+
+	struct {
+		unsigned in_use: 1;
+		unsigned long fifo_load;
+		struct drm_crtc_commit *pending_commit;
+	} fifo_state[HVS_NUM_CHANNELS];
 };
 
 static struct vc4_hvs_state *
@@ -186,6 +193,32 @@ vc4_ctm_commit(struct vc4_dev *vc4, struct drm_atomic_state *state)
 }
 
 static struct vc4_hvs_state *
+vc4_hvs_get_new_global_state(struct drm_atomic_state *state)
+{
+	struct vc4_dev *vc4 = to_vc4_dev(state->dev);
+	struct drm_private_state *priv_state;
+
+	priv_state = drm_atomic_get_new_private_obj_state(state, &vc4->hvs_channels);
+	if (IS_ERR(priv_state))
+		return ERR_CAST(priv_state);
+
+	return to_vc4_hvs_state(priv_state);
+}
+
+static struct vc4_hvs_state *
+vc4_hvs_get_old_global_state(struct drm_atomic_state *state)
+{
+	struct vc4_dev *vc4 = to_vc4_dev(state->dev);
+	struct drm_private_state *priv_state;
+
+	priv_state = drm_atomic_get_old_private_obj_state(state, &vc4->hvs_channels);
+	if (IS_ERR(priv_state))
+		return ERR_CAST(priv_state);
+
+	return to_vc4_hvs_state(priv_state);
+}
+
+static struct vc4_hvs_state *
 vc4_hvs_get_global_state(struct drm_atomic_state *state)
 {
 	struct vc4_dev *vc4 = to_vc4_dev(state->dev);
@@ -206,6 +239,7 @@ static void vc4_hvs_pv_muxing_commit(struct vc4_dev *vc4,
 	unsigned int i;
 
 	for_each_new_crtc_in_state(state, crtc, crtc_state, i) {
+		struct vc4_crtc *vc4_crtc = to_vc4_crtc(crtc);
 		struct vc4_crtc_state *vc4_state = to_vc4_crtc_state(crtc_state);
 		u32 dispctrl;
 		u32 dsp3_mux;
@@ -226,7 +260,7 @@ static void vc4_hvs_pv_muxing_commit(struct vc4_dev *vc4,
 		 * TXP IP, and we need to disable the FIFO2 -> pixelvalve1
 		 * route.
 		 */
-		if (vc4_state->feed_txp)
+		if (vc4_crtc->feeds_txp)
 			dsp3_mux = VC4_SET_FIELD(3, SCALER_DISPCTRL_DSP3_MUX);
 		else
 			dsp3_mux = VC4_SET_FIELD(2, SCALER_DISPCTRL_DSP3_MUX);
@@ -305,16 +339,26 @@ static void vc5_hvs_pv_muxing_commit(struct vc4_dev *vc4,
 	}
 }
 
-static void
-vc4_atomic_complete_commit(struct drm_atomic_state *state)
+static void vc4_atomic_commit_tail(struct drm_atomic_state *state)
 {
 	struct drm_device *dev = state->dev;
 	struct vc4_dev *vc4 = to_vc4_dev(dev);
 	struct vc4_hvs *hvs = vc4->hvs;
 	struct drm_crtc_state *new_crtc_state;
+	struct vc4_hvs_state *new_hvs_state;
 	struct drm_crtc *crtc;
+	struct vc4_hvs_state *old_hvs_state;
 	struct clk_request *core_req;
+	unsigned int channel;
 	int i;
+
+	old_hvs_state = vc4_hvs_get_old_global_state(state);
+	if (WARN_ON(IS_ERR(old_hvs_state)))
+		return;
+
+	new_hvs_state = vc4_hvs_get_new_global_state(state);
+	if (WARN_ON(IS_ERR(new_hvs_state)))
+		return;
 
 	for_each_new_crtc_in_state(state, crtc, new_crtc_state, i) {
 		struct vc4_crtc_state *vc4_crtc_state;
@@ -326,19 +370,52 @@ vc4_atomic_complete_commit(struct drm_atomic_state *state)
 		vc4_hvs_mask_underrun(dev, vc4_crtc_state->assigned_channel);
 	}
 
-	if (vc4->hvs && vc4->hvs->hvs5)
-		core_req = clk_request_start(hvs->core_clk, 500000000);
+	for (channel = 0; channel < HVS_NUM_CHANNELS; channel++) {
+		struct drm_crtc_commit *commit;
+		int ret;
 
-	drm_atomic_helper_wait_for_fences(dev, state, false);
+		if (!old_hvs_state->fifo_state[channel].in_use)
+			continue;
 
-	drm_atomic_helper_wait_for_dependencies(state);
+		commit = old_hvs_state->fifo_state[channel].pending_commit;
+		if (!commit)
+			continue;
+
+		ret = drm_crtc_commit_wait(commit);
+		if (ret)
+			drm_err(dev, "Timed out waiting for commit\n");
+
+		drm_crtc_commit_put(commit);
+		old_hvs_state->fifo_state[channel].pending_commit = NULL;
+	}
+
+	if (vc4->hvs && vc4->hvs->hvs5) {
+		unsigned long core_rate = max_t(unsigned long,
+						500000000,
+						new_hvs_state->core_clock_rate);
+
+		drm_dbg(dev, "Raising the core clock at %lu Hz\n", core_rate);
+
+		/*
+		 * Do a temporary request on the core clock during the
+		 * modeset.
+		 */
+		core_req = clk_request_start(hvs->core_clk, core_rate);
+
+		/*
+		 * And remove the previous one based on the HVS
+		 * requirements if any.
+		 */
+		clk_request_done(old_hvs_state->core_req);
+		old_hvs_state->core_req = NULL;
+	}
 
 	drm_atomic_helper_commit_modeset_disables(dev, state);
 
 	vc4_ctm_commit(vc4, state);
 
 	if (!vc4->firmware_kms) {
-		if (vc4->hvs->hvs5)
+		if (vc4->hvs && vc4->hvs->hvs5)
 			vc5_hvs_pv_muxing_commit(vc4, state);
 		else
 			vc4_hvs_pv_muxing_commit(vc4, state);
@@ -356,63 +433,30 @@ vc4_atomic_complete_commit(struct drm_atomic_state *state)
 
 	drm_atomic_helper_cleanup_planes(dev, state);
 
-	drm_atomic_helper_commit_cleanup_done(state);
+	if (vc4->hvs && vc4->hvs->hvs5) {
+		drm_dbg(dev, "Running the core clock at %lu Hz\n",
+			new_hvs_state->core_clock_rate);
 
-	if (vc4->hvs && vc4->hvs->hvs5)
+		/*
+		 * Request a clock rate based on the current HVS
+		 * requirements.
+		 */
+		new_hvs_state->core_req = clk_request_start(hvs->core_clk,
+							    new_hvs_state->core_clock_rate);
+
+		/* And drop the temporary request */
 		clk_request_done(core_req);
-
-	drm_atomic_state_put(state);
-
-	up(&vc4->async_modeset);
-}
-
-static void commit_work(struct work_struct *work)
-{
-	struct drm_atomic_state *state = container_of(work,
-						      struct drm_atomic_state,
-						      commit_work);
-	vc4_atomic_complete_commit(state);
-}
-
-/**
- * vc4_atomic_commit - commit validated state object
- * @dev: DRM device
- * @state: the driver state object
- * @nonblock: nonblocking commit
- *
- * This function commits a with drm_atomic_helper_check() pre-validated state
- * object. This can still fail when e.g. the framebuffer reservation fails. For
- * now this doesn't implement asynchronous commits.
- *
- * RETURNS
- * Zero for success or -errno.
- */
-static int vc4_atomic_commit(struct drm_device *dev,
-			     struct drm_atomic_state *state,
-			     bool nonblock)
-{
-	struct vc4_dev *vc4 = to_vc4_dev(dev);
-	int ret;
-
-	if (state->async_update) {
-		ret = down_interruptible(&vc4->async_modeset);
-		if (ret)
-			return ret;
-
-		ret = drm_atomic_helper_prepare_planes(dev, state);
-		if (ret) {
-			up(&vc4->async_modeset);
-			return ret;
-		}
-
-		drm_atomic_helper_async_commit(dev, state);
-
-		drm_atomic_helper_cleanup_planes(dev, state);
-
-		up(&vc4->async_modeset);
-
-		return 0;
 	}
+}
+
+static int vc4_atomic_commit_setup(struct drm_atomic_state *state)
+{
+	struct drm_device *dev = state->dev;
+	struct vc4_dev *vc4 = to_vc4_dev(dev);
+	struct drm_crtc_state *crtc_state;
+	struct vc4_hvs_state *hvs_state;
+	struct drm_crtc *crtc;
+	unsigned int i;
 
 	/* We know for sure we don't want an async update here. Set
 	 * state->legacy_cursor_update to false to prevent
@@ -421,60 +465,26 @@ static int vc4_atomic_commit(struct drm_device *dev,
 	 */
 	if (!vc4->firmware_kms)
 		state->legacy_cursor_update = false;
-	ret = drm_atomic_helper_setup_commit(state, nonblock);
-	if (ret)
-		return ret;
 
-	INIT_WORK(&state->commit_work, commit_work);
+	hvs_state = vc4_hvs_get_new_global_state(state);
+	if (WARN_ON(IS_ERR(hvs_state)))
+		return PTR_ERR(hvs_state);
 
-	ret = down_interruptible(&vc4->async_modeset);
-	if (ret)
-		return ret;
+	for_each_new_crtc_in_state(state, crtc, crtc_state, i) {
+		struct vc4_crtc_state *vc4_crtc_state =
+			to_vc4_crtc_state(crtc_state);
+		unsigned int channel =
+			vc4_crtc_state->assigned_channel;
 
-	ret = drm_atomic_helper_prepare_planes(dev, state);
-	if (ret) {
-		up(&vc4->async_modeset);
-		return ret;
+		if (channel == VC4_HVS_CHANNEL_DISABLED)
+			continue;
+
+		if (!hvs_state->fifo_state[channel].in_use)
+			continue;
+
+		hvs_state->fifo_state[channel].pending_commit =
+			drm_crtc_commit_get(crtc_state->commit);
 	}
-
-	if (!nonblock) {
-		ret = drm_atomic_helper_wait_for_fences(dev, state, true);
-		if (ret) {
-			drm_atomic_helper_cleanup_planes(dev, state);
-			up(&vc4->async_modeset);
-			return ret;
-		}
-	}
-
-	/*
-	 * This is the point of no return - everything below never fails except
-	 * when the hw goes bonghits. Which means we can commit the new state on
-	 * the software side now.
-	 */
-
-	BUG_ON(drm_atomic_helper_swap_state(state, false) < 0);
-
-	/*
-	 * Everything below can be run asynchronously without the need to grab
-	 * any modeset locks at all under one condition: It must be guaranteed
-	 * that the asynchronous work has either been cancelled (if the driver
-	 * supports it, which at least requires that the framebuffers get
-	 * cleaned up with drm_atomic_helper_cleanup_planes()) or completed
-	 * before the new state gets committed on the software side with
-	 * drm_atomic_helper_swap_state().
-	 *
-	 * This scheme allows new atomic state updates to be prepared and
-	 * checked in parallel to the asynchronous completion of the previous
-	 * update. Which is important since compositors need to figure out the
-	 * composition of the next frame right after having submitted the
-	 * current layout.
-	 */
-
-	drm_atomic_state_get(state);
-	if (nonblock)
-		queue_work(system_unbound_wq, &state->commit_work);
-	else
-		vc4_atomic_complete_commit(state);
 
 	return 0;
 }
@@ -598,9 +608,6 @@ static int vc4_load_tracker_atomic_check(struct drm_atomic_state *state)
 	struct drm_plane *plane;
 	int i;
 
-	if (!vc4->load_tracker_available)
-		return 0;
-
 	priv_state = drm_atomic_get_private_obj_state(state,
 						      &vc4->load_tracker);
 	if (IS_ERR(priv_state))
@@ -675,18 +682,12 @@ static void vc4_load_tracker_obj_fini(struct drm_device *dev, void *unused)
 {
 	struct vc4_dev *vc4 = to_vc4_dev(dev);
 
-	if (!vc4->load_tracker_available)
-		return;
-
 	drm_atomic_private_obj_fini(&vc4->load_tracker);
 }
 
 static int vc4_load_tracker_obj_init(struct vc4_dev *vc4)
 {
 	struct vc4_load_tracker_state *load_state;
-
-	if (!vc4->load_tracker_available)
-		return 0;
 
 	load_state = kzalloc(sizeof(*load_state), GFP_KERNEL);
 	if (!load_state)
@@ -704,6 +705,7 @@ vc4_hvs_channels_duplicate_state(struct drm_private_obj *obj)
 {
 	struct vc4_hvs_state *old_state = to_vc4_hvs_state(obj->state);
 	struct vc4_hvs_state *state;
+	unsigned int i;
 
 	state = kzalloc(sizeof(*state), GFP_KERNEL);
 	if (!state)
@@ -711,7 +713,12 @@ vc4_hvs_channels_duplicate_state(struct drm_private_obj *obj)
 
 	__drm_atomic_helper_private_obj_duplicate_state(obj, &state->base);
 
-	state->unassigned_channels = old_state->unassigned_channels;
+	for (i = 0; i < HVS_NUM_CHANNELS; i++) {
+		state->fifo_state[i].in_use = old_state->fifo_state[i].in_use;
+		state->fifo_state[i].fifo_load = old_state->fifo_state[i].fifo_load;
+	}
+
+	state->core_clock_rate = old_state->core_clock_rate;
 
 	return &state->base;
 }
@@ -720,6 +727,14 @@ static void vc4_hvs_channels_destroy_state(struct drm_private_obj *obj,
 					   struct drm_private_state *state)
 {
 	struct vc4_hvs_state *hvs_state = to_vc4_hvs_state(state);
+	unsigned int i;
+
+	for (i = 0; i < HVS_NUM_CHANNELS; i++) {
+		if (!hvs_state->fifo_state[i].pending_commit)
+			continue;
+
+		drm_crtc_commit_put(hvs_state->fifo_state[i].pending_commit);
+	}
 
 	kfree(hvs_state);
 }
@@ -744,7 +759,6 @@ static int vc4_hvs_channels_obj_init(struct vc4_dev *vc4)
 	if (!state)
 		return -ENOMEM;
 
-	state->unassigned_channels = GENMASK(HVS_NUM_CHANNELS - 1, 0);
 	drm_atomic_private_obj_init(&vc4->base, &vc4->hvs_channels,
 				    &state->base,
 				    &vc4_hvs_state_funcs);
@@ -789,11 +803,16 @@ static int vc4_pv_muxing_atomic_check(struct drm_device *dev,
 	struct vc4_hvs_state *hvs_new_state;
 	struct drm_crtc_state *old_crtc_state, *new_crtc_state;
 	struct drm_crtc *crtc;
+	unsigned int unassigned_channels = 0;
 	unsigned int i;
 
 	hvs_new_state = vc4_hvs_get_global_state(state);
-	if (!hvs_new_state)
-		return -EINVAL;
+	if (IS_ERR(hvs_new_state))
+		return PTR_ERR(hvs_new_state);
+
+	for (i = 0; i < ARRAY_SIZE(hvs_new_state->fifo_state); i++)
+		if (!hvs_new_state->fifo_state[i].in_use)
+			unassigned_channels |= BIT(i);
 
 	for_each_oldnew_crtc_in_state(state, crtc, old_crtc_state, new_crtc_state, i) {
 		struct vc4_crtc_state *old_vc4_crtc_state =
@@ -802,6 +821,7 @@ static int vc4_pv_muxing_atomic_check(struct drm_device *dev,
 			to_vc4_crtc_state(new_crtc_state);
 		struct vc4_crtc *vc4_crtc = to_vc4_crtc(crtc);
 		unsigned int matching_channels;
+		unsigned int channel;
 
 		if (vc4->firmware_kms)
 			continue;
@@ -815,7 +835,8 @@ static int vc4_pv_muxing_atomic_check(struct drm_device *dev,
 
 		/* If we're disabling our CRTC, we put back our channel */
 		if (!new_crtc_state->enable) {
-			hvs_new_state->unassigned_channels |= BIT(old_vc4_crtc_state->assigned_channel);
+			channel = old_vc4_crtc_state->assigned_channel;
+			hvs_new_state->fifo_state[channel].in_use = false;
 			new_vc4_crtc_state->assigned_channel = VC4_HVS_CHANNEL_DISABLED;
 			continue;
 		}
@@ -844,19 +865,88 @@ static int vc4_pv_muxing_atomic_check(struct drm_device *dev,
 		 * the future, we will need to have something smarter,
 		 * but it works so far.
 		 */
-		matching_channels = hvs_new_state->unassigned_channels & vc4_crtc->data->hvs_available_channels;
-		if (matching_channels) {
-			unsigned int channel = ffs(matching_channels) - 1;
-
-			new_vc4_crtc_state->assigned_channel = channel;
-			hvs_new_state->unassigned_channels &= ~BIT(channel);
-		} else {
+		matching_channels = unassigned_channels & vc4_crtc->data->hvs_available_channels;
+		if (!matching_channels)
 			return -EINVAL;
-		}
+
+		channel = ffs(matching_channels) - 1;
+		new_vc4_crtc_state->assigned_channel = channel;
+		unassigned_channels &= ~BIT(channel);
+		hvs_new_state->fifo_state[channel].in_use = true;
 	}
 
 	return 0;
 }
+
+static int
+vc4_core_clock_atomic_check(struct drm_atomic_state *state)
+{
+	struct vc4_dev *vc4 = to_vc4_dev(state->dev);
+	struct drm_private_state *priv_state;
+	struct vc4_hvs_state *hvs_new_state;
+	struct vc4_load_tracker_state *load_state;
+	struct drm_crtc_state *old_crtc_state, *new_crtc_state;
+	struct drm_crtc *crtc;
+	unsigned int num_outputs;
+	unsigned long pixel_rate;
+	unsigned long cob_rate;
+	unsigned int i;
+
+	priv_state = drm_atomic_get_private_obj_state(state,
+						      &vc4->load_tracker);
+	if (IS_ERR(priv_state))
+		return PTR_ERR(priv_state);
+
+	load_state = to_vc4_load_tracker_state(priv_state);
+
+	hvs_new_state = vc4_hvs_get_global_state(state);
+	if (IS_ERR(hvs_new_state))
+		return PTR_ERR(hvs_new_state);
+
+	for_each_oldnew_crtc_in_state(state, crtc,
+				      old_crtc_state,
+				      new_crtc_state,
+				      i) {
+		if (old_crtc_state->active) {
+			struct vc4_crtc_state *old_vc4_state =
+				to_vc4_crtc_state(old_crtc_state);
+			unsigned int channel = old_vc4_state->assigned_channel;
+
+			hvs_new_state->fifo_state[channel].fifo_load = 0;
+		}
+
+		if (new_crtc_state->active) {
+			struct vc4_crtc_state *new_vc4_state =
+				to_vc4_crtc_state(new_crtc_state);
+			unsigned int channel = new_vc4_state->assigned_channel;
+
+			hvs_new_state->fifo_state[channel].fifo_load =
+				new_vc4_state->hvs_load;
+		}
+	}
+
+	cob_rate = 0;
+	num_outputs = 0;
+	for (i = 0; i < HVS_NUM_CHANNELS; i++) {
+		if (!hvs_new_state->fifo_state[i].in_use)
+			continue;
+
+		num_outputs++;
+		cob_rate += hvs_new_state->fifo_state[i].fifo_load;
+	}
+
+	pixel_rate = load_state->hvs_load;
+	if (num_outputs > 1) {
+		pixel_rate = (pixel_rate * 40) / 100;
+	} else {
+		pixel_rate = (pixel_rate * 60) / 100;
+	}
+
+	hvs_new_state->core_clock_rate = max(cob_rate, pixel_rate);
+
+	return 0;
+}
+
 
 static int
 vc4_atomic_check(struct drm_device *dev, struct drm_atomic_state *state)
@@ -875,12 +965,21 @@ vc4_atomic_check(struct drm_device *dev, struct drm_atomic_state *state)
 	if (ret)
 		return ret;
 
-	return vc4_load_tracker_atomic_check(state);
+	ret = vc4_load_tracker_atomic_check(state);
+	if (ret)
+		return ret;
+
+	return vc4_core_clock_atomic_check(state);
 }
+
+static struct drm_mode_config_helper_funcs vc4_mode_config_helpers = {
+	.atomic_commit_setup	= vc4_atomic_commit_setup,
+	.atomic_commit_tail	= vc4_atomic_commit_tail,
+};
 
 static const struct drm_mode_config_funcs vc4_mode_funcs = {
 	.atomic_check = vc4_atomic_check,
-	.atomic_commit = vc4_atomic_commit,
+	.atomic_commit = drm_atomic_helper_commit,
 	.fb_create = vc4_fb_create,
 };
 
@@ -891,21 +990,21 @@ int vc4_kms_load(struct drm_device *dev)
 					      "brcm,bcm2711-vc5");
 	int ret;
 
+	/*
+	 * The limits enforced by the load tracker aren't relevant for
+	 * the BCM2711, but the load tracker computations are used for
+	 * the core clock rate calculation.
+	 */
 	if (!is_vc5) {
-		vc4->load_tracker_available = true;
-
 		/* Start with the load tracker enabled. Can be
 		 * disabled through the debugfs load_tracker file.
 		 */
 		vc4->load_tracker_enabled = true;
 	}
 
-	sema_init(&vc4->async_modeset, 1);
-
 	/* Set support for vblank irq fast disable, before drm_vblank_init() */
 	dev->vblank_disable_immediate = true;
 
-	dev->irq_enabled = true;
 	ret = drm_vblank_init(dev, dev->mode_config.num_crtc);
 	if (ret < 0) {
 		dev_err(dev->dev, "failed to initialize vblank\n");
@@ -921,9 +1020,9 @@ int vc4_kms_load(struct drm_device *dev)
 	}
 
 	dev->mode_config.funcs = &vc4_mode_funcs;
+	dev->mode_config.helper_private = &vc4_mode_config_helpers;
 	dev->mode_config.preferred_depth = 24;
 	dev->mode_config.async_page_flip = true;
-	dev->mode_config.allow_fb_modifiers = true;
 	if (vc4->firmware_kms)
 		dev->mode_config.normalize_zpos = true;
 

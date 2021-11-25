@@ -46,8 +46,7 @@ enum imx290_clk_index {
 #define IMX290_VMAX_MAX 0x3fff
 #define IMX290_HMAX_LOW 0x301c
 #define IMX290_HMAX_HIGH 0x301d
-#define IMX290_HMAX_MIN_2LANE 4400 /* Min of 4400 pixels = 30fps */
-#define IMX290_HMAX_MIN_4LANE 2200 /* Min of 2200 pixels = 60fps */
+#define IMX290_HMAX_MIN 2200 /* Min of 2200 pixels = 60fps */
 #define IMX290_HMAX_MAX 0xffff
 
 #define IMX290_EXPOSURE_MIN 1
@@ -89,8 +88,11 @@ struct imx290_mode {
 	u8 link_freq_index;
 	struct v4l2_rect crop;
 
-	const struct imx290_regval *data;
-	u32 data_size;
+	const struct imx290_regval *mode_data;
+	u32 mode_data_size;
+	const struct imx290_regval *lane_data;
+	u32 lane_data_size;
+
 
 	/* Clock setup can vary. Index as enum imx290_clk_index */
 	const struct imx290_regval *clk_data[2];
@@ -242,8 +244,9 @@ static const struct imx290_regval imx290_74_250mhz_clock_1080p[] = {
 	{ 0x3480, 0x92 },
 };
 
-static const struct imx290_regval imx290_1080p_settings[] = {
+static const struct imx290_regval imx290_1080p_common_settings[] = {
 	/* mode settings */
+	{ IMX290_FR_FDG_SEL, 0x01 },
 	{ 0x3007, 0x00 },
 	{ 0x303a, 0x0c },
 	{ 0x3414, 0x0a },
@@ -253,8 +256,36 @@ static const struct imx290_regval imx290_1080p_settings[] = {
 	{ 0x3419, 0x04 },
 	{ 0x3012, 0x64 },
 	{ 0x3013, 0x00 },
+};
+
+static const struct imx290_regval imx290_1080p_2lane_settings[] = {
+	{ 0x3405, 0x00 },
 	/* data rate settings */
+	{ IMX290_PHY_LANE_NUM, 0x01 },
+	{ IMX290_CSI_LANE_MODE, 0x01 },
+	{ 0x3446, 0x77 },
+	{ 0x3447, 0x00 },
+	{ 0x3448, 0x67 },
+	{ 0x3449, 0x00 },
+	{ 0x344a, 0x47 },
+	{ 0x344b, 0x00 },
+	{ 0x344c, 0x37 },
+	{ 0x344d, 0x00 },
+	{ 0x344e, 0x3f },
+	{ 0x344f, 0x00 },
+	{ 0x3450, 0xff },
+	{ 0x3451, 0x00 },
+	{ 0x3452, 0x3f },
+	{ 0x3453, 0x00 },
+	{ 0x3454, 0x37 },
+	{ 0x3455, 0x00 },
+};
+
+static const struct imx290_regval imx290_1080p_4lane_settings[] = {
 	{ 0x3405, 0x10 },
+	/* data rate settings */
+	{ IMX290_PHY_LANE_NUM, 0x03 },
+	{ IMX290_CSI_LANE_MODE, 0x03 },
 	{ 0x3446, 0x57 },
 	{ 0x3447, 0x00 },
 	{ 0x3448, 0x37 },
@@ -297,8 +328,9 @@ static const struct imx290_regval imx290_74_250mhz_clock_720p[] = {
 	{ 0x3480, 0x92 },
 };
 
-static const struct imx290_regval imx290_720p_settings[] = {
+static const struct imx290_regval imx290_720p_common_settings[] = {
 	/* mode settings */
+	{ IMX290_FR_FDG_SEL, 0x01 },
 	{ 0x3007, 0x10 },
 	{ 0x303a, 0x06 },
 	{ 0x3414, 0x04 },
@@ -308,8 +340,36 @@ static const struct imx290_regval imx290_720p_settings[] = {
 	{ 0x3419, 0x02 },
 	{ 0x3012, 0x64 },
 	{ 0x3013, 0x00 },
+};
+
+static const struct imx290_regval imx290_720p_2lane_settings[] = {
+	{ 0x3405, 0x00 },
+	{ IMX290_PHY_LANE_NUM, 0x01 },
+	{ IMX290_CSI_LANE_MODE, 0x01 },
 	/* data rate settings */
+	{ 0x3446, 0x67 },
+	{ 0x3447, 0x00 },
+	{ 0x3448, 0x57 },
+	{ 0x3449, 0x00 },
+	{ 0x344a, 0x2f },
+	{ 0x344b, 0x00 },
+	{ 0x344c, 0x27 },
+	{ 0x344d, 0x00 },
+	{ 0x344e, 0x2f },
+	{ 0x344f, 0x00 },
+	{ 0x3450, 0xbf },
+	{ 0x3451, 0x00 },
+	{ 0x3452, 0x2f },
+	{ 0x3453, 0x00 },
+	{ 0x3454, 0x27 },
+	{ 0x3455, 0x00 },
+};
+
+static const struct imx290_regval imx290_720p_4lane_settings[] = {
 	{ 0x3405, 0x10 },
+	{ IMX290_PHY_LANE_NUM, 0x03 },
+	{ IMX290_CSI_LANE_MODE, 0x03 },
+	/* data rate settings */
 	{ 0x3446, 0x4f },
 	{ 0x3447, 0x00 },
 	{ 0x3448, 0x2f },
@@ -389,7 +449,7 @@ static const struct imx290_mode imx290_modes_2lanes[] = {
 	{
 		.width = 1920,
 		.height = 1080,
-		.hmax = 0x1130,
+		.hmax = 0x0898,
 		.vmax = 0x0465,
 		.link_freq_index = FREQ_INDEX_1080P,
 		.crop = {
@@ -398,8 +458,10 @@ static const struct imx290_mode imx290_modes_2lanes[] = {
 			.width = 1920,
 			.height = 1080,
 		},
-		.data = imx290_1080p_settings,
-		.data_size = ARRAY_SIZE(imx290_1080p_settings),
+		.mode_data = imx290_1080p_common_settings,
+		.mode_data_size = ARRAY_SIZE(imx290_1080p_common_settings),
+		.lane_data = imx290_1080p_2lane_settings,
+		.lane_data_size = ARRAY_SIZE(imx290_1080p_2lane_settings),
 		.clk_data = {
 			[CLK_37_125] = imx290_37_125mhz_clock_1080p,
 			[CLK_74_25] = imx290_74_250mhz_clock_1080p,
@@ -409,7 +471,7 @@ static const struct imx290_mode imx290_modes_2lanes[] = {
 	{
 		.width = 1280,
 		.height = 720,
-		.hmax = 0x19c8,
+		.hmax = 0x0ce4,
 		.vmax = 0x02ee,
 		.link_freq_index = FREQ_INDEX_720P,
 		.crop = {
@@ -418,13 +480,15 @@ static const struct imx290_mode imx290_modes_2lanes[] = {
 			.width = 1280,
 			.height = 720,
 		},
-		.data = imx290_720p_settings,
-		.data_size = ARRAY_SIZE(imx290_720p_settings),
+		.mode_data = imx290_720p_common_settings,
+		.mode_data_size = ARRAY_SIZE(imx290_720p_common_settings),
+		.lane_data = imx290_720p_2lane_settings,
+		.lane_data_size = ARRAY_SIZE(imx290_720p_2lane_settings),
 		.clk_data = {
-			[CLK_37_125] = imx290_37_125mhz_clock_1080p,
-			[CLK_74_25] = imx290_74_250mhz_clock_1080p,
+			[CLK_37_125] = imx290_37_125mhz_clock_720p,
+			[CLK_74_25] = imx290_74_250mhz_clock_720p,
 		},
-		.clk_size = ARRAY_SIZE(imx290_37_125mhz_clock_1080p),
+		.clk_size = ARRAY_SIZE(imx290_37_125mhz_clock_720p),
 	},
 };
 
@@ -441,13 +505,15 @@ static const struct imx290_mode imx290_modes_4lanes[] = {
 			.width = 1920,
 			.height = 1080,
 		},
-		.data = imx290_1080p_settings,
-		.data_size = ARRAY_SIZE(imx290_1080p_settings),
+		.mode_data = imx290_1080p_common_settings,
+		.mode_data_size = ARRAY_SIZE(imx290_1080p_common_settings),
+		.lane_data = imx290_1080p_4lane_settings,
+		.lane_data_size = ARRAY_SIZE(imx290_1080p_4lane_settings),
 		.clk_data = {
-			[CLK_37_125] = imx290_37_125mhz_clock_720p,
-			[CLK_74_25] = imx290_74_250mhz_clock_720p,
+			[CLK_37_125] = imx290_37_125mhz_clock_1080p,
+			[CLK_74_25] = imx290_74_250mhz_clock_1080p,
 		},
-		.clk_size = ARRAY_SIZE(imx290_37_125mhz_clock_720p),
+		.clk_size = ARRAY_SIZE(imx290_37_125mhz_clock_1080p),
 	},
 	{
 		.width = 1280,
@@ -461,8 +527,10 @@ static const struct imx290_mode imx290_modes_4lanes[] = {
 			.width = 1280,
 			.height = 720,
 		},
-		.data = imx290_720p_settings,
-		.data_size = ARRAY_SIZE(imx290_720p_settings),
+		.mode_data = imx290_720p_common_settings,
+		.mode_data_size = ARRAY_SIZE(imx290_720p_common_settings),
+		.lane_data = imx290_720p_4lane_settings,
+		.lane_data_size = ARRAY_SIZE(imx290_720p_4lane_settings),
 		.clk_data = {
 			[CLK_37_125] = imx290_37_125mhz_clock_720p,
 			[CLK_74_25] = imx290_74_250mhz_clock_720p,
@@ -723,7 +791,7 @@ static const struct v4l2_ctrl_ops imx290_ctrl_ops = {
 };
 
 static int imx290_enum_mbus_code(struct v4l2_subdev *sd,
-				 struct v4l2_subdev_pad_config *cfg,
+				 struct v4l2_subdev_state *sd_state,
 				 struct v4l2_subdev_mbus_code_enum *code)
 {
 	const struct imx290 *imx290 = to_imx290(sd);
@@ -737,7 +805,7 @@ static int imx290_enum_mbus_code(struct v4l2_subdev *sd,
 }
 
 static int imx290_enum_frame_size(struct v4l2_subdev *sd,
-				  struct v4l2_subdev_pad_config *cfg,
+				  struct v4l2_subdev_state *sd_state,
 				  struct v4l2_subdev_frame_size_enum *fse)
 {
 	const struct imx290 *imx290 = to_imx290(sd);
@@ -759,7 +827,7 @@ static int imx290_enum_frame_size(struct v4l2_subdev *sd,
 }
 
 static int imx290_get_fmt(struct v4l2_subdev *sd,
-			  struct v4l2_subdev_pad_config *cfg,
+			  struct v4l2_subdev_state *sd_state,
 			  struct v4l2_subdev_format *fmt)
 {
 	struct imx290 *imx290 = to_imx290(sd);
@@ -768,7 +836,7 @@ static int imx290_get_fmt(struct v4l2_subdev *sd,
 	mutex_lock(&imx290->lock);
 
 	if (fmt->which == V4L2_SUBDEV_FORMAT_TRY)
-		framefmt = v4l2_subdev_get_try_format(&imx290->sd, cfg,
+		framefmt = v4l2_subdev_get_try_format(&imx290->sd, sd_state,
 						      fmt->pad);
 	else
 		framefmt = &imx290->current_format;
@@ -785,28 +853,14 @@ static inline u8 imx290_get_link_freq_index(struct imx290 *imx290)
 	return imx290->current_mode->link_freq_index;
 }
 
-static s64 imx290_get_link_freq(struct imx290 *imx290)
-{
-	u8 index = imx290_get_link_freq_index(imx290);
-
-	return *(imx290_link_freqs_ptr(imx290) + index);
-}
-
 static u64 imx290_calc_pixel_rate(struct imx290 *imx290)
 {
-	s64 link_freq = imx290_get_link_freq(imx290);
-	u8 nlanes = imx290->nlanes;
-	u64 pixel_rate;
-
-	/* pixel rate = link_freq * 2 * nr_of_lanes / bits_per_sample */
-	pixel_rate = link_freq * 2 * nlanes;
-	do_div(pixel_rate, imx290->bpp);
-	return pixel_rate;
+	return 148500000;
 }
 
 static int imx290_set_fmt(struct v4l2_subdev *sd,
-			  struct v4l2_subdev_pad_config *cfg,
-		      struct v4l2_subdev_format *fmt)
+			  struct v4l2_subdev_state *sd_state,
+			  struct v4l2_subdev_format *fmt)
 {
 	struct imx290 *imx290 = to_imx290(sd);
 	const struct imx290_mode *mode;
@@ -831,7 +885,7 @@ static int imx290_set_fmt(struct v4l2_subdev *sd,
 
 	fmt->format.code = imx290->formats[i].code;
 	fmt->format.field = V4L2_FIELD_NONE;
-	fmt->format.colorspace = V4L2_COLORSPACE_SRGB;
+	fmt->format.colorspace = V4L2_COLORSPACE_RAW;
 	fmt->format.ycbcr_enc =
 			V4L2_MAP_YCBCR_ENC_DEFAULT(fmt->format.colorspace);
 	fmt->format.quantization =
@@ -841,7 +895,7 @@ static int imx290_set_fmt(struct v4l2_subdev *sd,
 		V4L2_MAP_XFER_FUNC_DEFAULT(fmt->format.colorspace);
 
 	if (fmt->which == V4L2_SUBDEV_FORMAT_TRY) {
-		format = v4l2_subdev_get_try_format(sd, cfg, fmt->pad);
+		format = v4l2_subdev_get_try_format(sd, sd_state, fmt->pad);
 	} else {
 		format = &imx290->current_format;
 		imx290->current_mode = mode;
@@ -887,15 +941,15 @@ static int imx290_set_fmt(struct v4l2_subdev *sd,
 }
 
 static int imx290_entity_init_cfg(struct v4l2_subdev *subdev,
-				  struct v4l2_subdev_pad_config *cfg)
+				  struct v4l2_subdev_state *sd_state)
 {
 	struct v4l2_subdev_format fmt = { 0 };
 
-	fmt.which = cfg ? V4L2_SUBDEV_FORMAT_TRY : V4L2_SUBDEV_FORMAT_ACTIVE;
+	fmt.which = sd_state ? V4L2_SUBDEV_FORMAT_TRY : V4L2_SUBDEV_FORMAT_ACTIVE;
 	fmt.format.width = 1920;
 	fmt.format.height = 1080;
 
-	imx290_set_fmt(subdev, cfg, &fmt);
+	imx290_set_fmt(subdev, sd_state, &fmt);
 
 	return 0;
 }
@@ -934,12 +988,13 @@ static int imx290_write_current_format(struct imx290 *imx290)
 }
 
 static const struct v4l2_rect *
-__imx290_get_pad_crop(struct imx290 *imx290, struct v4l2_subdev_pad_config *cfg,
+__imx290_get_pad_crop(struct imx290 *imx290,
+		      struct v4l2_subdev_state *sd_state,
 		      unsigned int pad, enum v4l2_subdev_format_whence which)
 {
 	switch (which) {
 	case V4L2_SUBDEV_FORMAT_TRY:
-		return v4l2_subdev_get_try_crop(&imx290->sd, cfg, pad);
+		return v4l2_subdev_get_try_crop(&imx290->sd, sd_state, pad);
 	case V4L2_SUBDEV_FORMAT_ACTIVE:
 		return &imx290->current_mode->crop;
 	}
@@ -948,7 +1003,7 @@ __imx290_get_pad_crop(struct imx290 *imx290, struct v4l2_subdev_pad_config *cfg,
 }
 
 static int imx290_get_selection(struct v4l2_subdev *sd,
-				struct v4l2_subdev_pad_config *cfg,
+				struct v4l2_subdev_state *sd_state,
 				struct v4l2_subdev_selection *sel)
 {
 	switch (sel->target) {
@@ -956,7 +1011,7 @@ static int imx290_get_selection(struct v4l2_subdev *sd,
 		struct imx290 *imx290 = to_imx290(sd);
 
 		mutex_lock(&imx290->lock);
-		sel->r = *__imx290_get_pad_crop(imx290, cfg, sel->pad,
+		sel->r = *__imx290_get_pad_crop(imx290, sd_state, sel->pad,
 						sel->which);
 		mutex_unlock(&imx290->lock);
 
@@ -1016,8 +1071,18 @@ static int imx290_start_streaming(struct imx290 *imx290)
 	}
 
 	/* Apply default values of current mode */
-	ret = imx290_set_register_array(imx290, imx290->current_mode->data,
-					imx290->current_mode->data_size);
+	ret = imx290_set_register_array(imx290,
+					imx290->current_mode->mode_data,
+					imx290->current_mode->mode_data_size);
+	if (ret < 0) {
+		dev_err(imx290->dev, "Could not set current mode\n");
+		return ret;
+	}
+
+	/* Apply lane config registers of current mode */
+	ret = imx290_set_register_array(imx290,
+					imx290->current_mode->lane_data,
+					imx290->current_mode->lane_data_size);
 	if (ret < 0) {
 		dev_err(imx290->dev, "Could not set current mode\n");
 		return ret;
@@ -1046,11 +1111,9 @@ static int imx290_set_stream(struct v4l2_subdev *sd, int enable)
 	int ret = 0;
 
 	if (enable) {
-		ret = pm_runtime_get_sync(imx290->dev);
-		if (ret < 0) {
-			pm_runtime_put_noidle(imx290->dev);
+		ret = pm_runtime_resume_and_get(imx290->dev);
+		if (ret < 0)
 			goto unlock_and_return;
-		}
 
 		ret = imx290_start_streaming(imx290);
 		if (ret) {
@@ -1082,65 +1145,21 @@ static int imx290_get_regulators(struct device *dev, struct imx290 *imx290)
 				       imx290->supplies);
 }
 
-static int imx290_set_data_lanes(struct imx290 *imx290)
-{
-	int ret = 0, laneval, frsel;
-
-	switch (imx290->nlanes) {
-	case 2:
-		laneval = 0x01;
-		frsel = 0x02;
-		break;
-	case 4:
-		laneval = 0x03;
-		frsel = 0x01;
-		break;
-	default:
-		/*
-		 * We should never hit this since the data lane count is
-		 * validated in probe itself
-		 */
-		dev_err(imx290->dev, "Lane configuration not supported\n");
-		ret = -EINVAL;
-		goto exit;
-	}
-
-	ret = imx290_write_reg(imx290, IMX290_PHY_LANE_NUM, laneval);
-	if (ret) {
-		dev_err(imx290->dev, "Error setting Physical Lane number register\n");
-		goto exit;
-	}
-
-	ret = imx290_write_reg(imx290, IMX290_CSI_LANE_MODE, laneval);
-	if (ret) {
-		dev_err(imx290->dev, "Error setting CSI Lane mode register\n");
-		goto exit;
-	}
-
-	ret = imx290_write_reg(imx290, IMX290_FR_FDG_SEL, frsel);
-	if (ret)
-		dev_err(imx290->dev, "Error setting FR/FDG SEL register\n");
-
-exit:
-	return ret;
-}
-
 static int imx290_power_on(struct device *dev)
 {
-	struct i2c_client *client = to_i2c_client(dev);
-	struct v4l2_subdev *sd = i2c_get_clientdata(client);
+	struct v4l2_subdev *sd = dev_get_drvdata(dev);
 	struct imx290 *imx290 = to_imx290(sd);
 	int ret;
 
 	ret = clk_prepare_enable(imx290->xclk);
 	if (ret) {
-		dev_err(imx290->dev, "Failed to enable clock\n");
+		dev_err(dev, "Failed to enable clock\n");
 		return ret;
 	}
 
 	ret = regulator_bulk_enable(IMX290_NUM_SUPPLIES, imx290->supplies);
 	if (ret) {
-		dev_err(imx290->dev, "Failed to enable regulators\n");
+		dev_err(dev, "Failed to enable regulators\n");
 		clk_disable_unprepare(imx290->xclk);
 		return ret;
 	}
@@ -1149,16 +1168,12 @@ static int imx290_power_on(struct device *dev)
 	gpiod_set_value_cansleep(imx290->rst_gpio, 0);
 	usleep_range(30000, 31000);
 
-	/* Set data lane count */
-	imx290_set_data_lanes(imx290);
-
 	return 0;
 }
 
 static int imx290_power_off(struct device *dev)
 {
-	struct i2c_client *client = to_i2c_client(dev);
-	struct v4l2_subdev *sd = i2c_get_clientdata(client);
+	struct v4l2_subdev *sd = dev_get_drvdata(dev);
 	struct imx290 *imx290 = to_imx290(sd);
 
 	clk_disable_unprepare(imx290->xclk);
@@ -1224,6 +1239,7 @@ static const struct of_device_id imx290_of_match[] = {
 
 static int imx290_probe(struct i2c_client *client)
 {
+	struct v4l2_fwnode_device_properties props;
 	struct device *dev = &client->dev;
 	struct fwnode_handle *endpoint;
 	/* Only CSI2 is supported for now: */
@@ -1275,8 +1291,7 @@ static int imx290_probe(struct i2c_client *client)
 		ret = -EINVAL;
 		goto free_err;
 	}
-	imx290->hmax_min = (imx290->nlanes == 2) ? IMX290_HMAX_MIN_2LANE :
-						 IMX290_HMAX_MIN_4LANE;
+	imx290->hmax_min = IMX290_HMAX_MIN;
 
 	dev_dbg(dev, "Using %u data lanes\n", imx290->nlanes);
 
@@ -1346,7 +1361,7 @@ static int imx290_probe(struct i2c_client *client)
 	 */
 	imx290_entity_init_cfg(&imx290->sd, NULL);
 
-	v4l2_ctrl_handler_init(&imx290->ctrls, 9);
+	v4l2_ctrl_handler_init(&imx290->ctrls, 11);
 
 	v4l2_ctrl_new_std(&imx290->ctrls, &imx290_ctrl_ops,
 			  V4L2_CID_ANALOGUE_GAIN, 0, 100, 1, 0);
@@ -1393,6 +1408,15 @@ static int imx290_probe(struct i2c_client *client)
 				     V4L2_CID_TEST_PATTERN,
 				     ARRAY_SIZE(imx290_test_pattern_menu) - 1,
 				     0, 0, imx290_test_pattern_menu);
+
+	ret = v4l2_fwnode_device_parse(&client->dev, &props);
+	if (ret)
+		goto free_ctrl;
+
+	ret = v4l2_ctrl_new_fwnode_properties(&imx290->ctrls, &imx290_ctrl_ops,
+					      &props);
+	if (ret)
+		goto free_ctrl;
 
 	imx290->sd.ctrl_handler = &imx290->ctrls;
 
