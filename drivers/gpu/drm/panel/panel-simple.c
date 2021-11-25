@@ -722,9 +722,8 @@ static int panel_simple_probe(struct device *dev, const struct panel_desc *desc,
 		if (err)
 			goto free_ddc;
 	} else {
-		if (!of_get_display_timing(dev->of_node, "panel-timing", &dt)) {
+		if (!of_get_display_timing(dev->of_node, "panel-timing", &dt))
 			panel_simple_parse_panel_timing_node(dev, panel, &dt);
-		}
 	}
 
 	connector_type = desc->connector_type;
@@ -1841,38 +1840,6 @@ static const struct panel_desc chunghwa_claa070wp03xg = {
 		.height = 150,
 	},
 	.bus_format = MEDIA_BUS_FMT_RGB666_1X7X3_SPWG,
-	.bus_flags = DRM_BUS_FLAG_DE_HIGH,
-	.connector_type = DRM_MODE_CONNECTOR_LVDS,
-};
-
-static const struct display_timing chunghwa_claa070wp03xglvds_timing = {
-	.pixelclock = { 66800000, 66800000, 66800000 },
-	.hactive = { 800, 800, 800 },
-	.hfront_porch = { 16, 16, 16 },
-	.hback_porch = { 32, 32, 32 },
-	.hsync_len = { 16, 16, 16 },
-	.vactive = { 1280, 1280, 1280 },
-	.vfront_porch = { 5, 5, 5 },
-	.vback_porch = { 2, 2, 2 },
-	.vsync_len = { 1, 1, 1 },
-	.flags = DRM_MODE_FLAG_NHSYNC |
-		 DRM_MODE_FLAG_NVSYNC |
-		 DISPLAY_FLAGS_DE_HIGH,
-};
-
-static const struct panel_desc chunghwa_claa070wp03xglvds = {
-	.timings = &chunghwa_claa070wp03xglvds_timing,
-	.num_timings = 1,
-	.bpc = 8,
-	.size = {
-		.width = 94,
-		.height = 150,
-	},
-	.delay = {
-		.enable = 200,
-		.disable = 110,
-	},
-	.bus_format = MEDIA_BUS_FMT_RGB888_1X7X4_JEIDA,
 	.bus_flags = DRM_BUS_FLAG_DE_HIGH,
 	.connector_type = DRM_MODE_CONNECTOR_LVDS,
 };
@@ -4554,63 +4521,8 @@ static const struct panel_desc arm_rtsm = {
 	.bus_format = MEDIA_BUS_FMT_RGB888_1X24,
 };
 
-#define INNOLUX_G156HCE_TIMING
-#ifdef INNOLUX_G156HCE_TIMING
-static const struct display_timing innolux_g156hce_timing = {
-	.pixelclock = { 70930000, 70930000, 70930000 },
-	.hactive = { 1920, 1920, 1920 },
-	.hfront_porch = { 16, 16, 16 },
-	.hback_porch = { 32, 32, 32 },
-	.hsync_len = { 16, 16, 16 },
-	.vactive = { 1080, 1080, 1080 },
-	.vfront_porch = { 5, 5, 5 },
-	.vback_porch = { 2, 2, 2 },
-	.vsync_len = { 1, 1, 1 },
-	.flags = DISPLAY_FLAGS_DE_HIGH,
-};
-#else
-static const struct drm_display_mode innolux_g156hce_mode = {
-	.clock = 70930,
-
-	.hdisplay = 1920,
-	.hsync_start = 1920 + 105, //hactive + hfront-porch
-	.hsync_end = 1920 + 105 + 105, //.hsync_start + hback-porch
-	.htotal = 1920 + 105 + 105 + 80, // .hsync_end + hsync-len
-
-	.vdisplay = 1080,
-	.vsync_start = 1080 + 30,
-	.vsync_end = 1080 + 30 + 30,
-	.vtotal = 1080 + 30 + 30 + 4,
-};
-#endif
-
-static const struct panel_desc innolux_g156hce = {
-#ifdef INNOLUX_G156HCE_TIMING
-	.timings = &innolux_g156hce_timing,
-	.num_timings = 1,
-#else
-	.modes = &innolux_g156hce_mode,
-	.num_modes = 1,
-#endif
-	.bpc = 8,
-	.size = {
-		.width = 344,
-		.height = 194,
-	},
-	.delay = {
-		.enable = 200,
-		.disable = 110,
-	},
-	.bus_format = MEDIA_BUS_FMT_RGB888_1X7X4_SPWG,
-	.bus_flags = DRM_BUS_FLAG_DE_HIGH,
-	.connector_type = DRM_MODE_CONNECTOR_LVDS,
-};
-
 static const struct of_device_id platform_of_match[] = {
 	{
-		.compatible = "innolux,g156hce-l01",
-		.data = &innolux_g156hce,
-	}, {
 		.compatible = "ampire,am-1280800n3tzqw-t00h",
 		.data = &ampire_am_1280800n3tzqw_t00h,
 	}, {
@@ -4724,9 +4636,6 @@ static const struct of_device_id platform_of_match[] = {
 	}, {
 		.compatible = "chunghwa,claa070wp03xg",
 		.data = &chunghwa_claa070wp03xg,
-	}, {
-		.compatible = "chunghwa,claa070wp03xglvds",
-		.data = &chunghwa_claa070wp03xglvds,
 	}, {
 		.compatible = "chunghwa,claa101wa01a",
 		.data = &chunghwa_claa101wa01a
