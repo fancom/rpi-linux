@@ -1,3 +1,5 @@
+//#define VERBOSE
+
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (C) 2016 Broadcom
@@ -41,6 +43,8 @@
 
 #include "vc4_drv.h"
 #include "vc4_regs.h"
+
+#define DEBUG
 
 #define DSI_CMD_FIFO_DEPTH  16
 #define DSI_PIX_FIFO_DEPTH 256
@@ -846,13 +850,20 @@ static bool vc4_dsi_encoder_mode_fixup(struct drm_encoder *encoder,
 	unsigned long pixel_clock_hz = mode->clock * 1000;
 	unsigned long pll_clock = pixel_clock_hz * dsi->divider;
 	int divider;
-
+#ifdef VERBOSE
+	printk(KERN_ERR "VC4_DSI: %s: BEFORE pixel_clock_hz %lu, divider %u, pll_clock %lu\n",
+	       __func__, pixel_clock_hz, dsi->divider, pll_clock);
+	printk(KERN_ERR "VC4_DSI: %s: parent_rate %lu\n",
+	       __func__, parent_rate);
+#endif
 	/* Find what divider gets us a faster clock than the requested
 	 * pixel clock.
 	 */
-	for (divider = 1; divider < 7; divider++) {
-		if (parent_rate / (divider + 1) < pll_clock)
+	for (divider = 1; divider < 8; divider++) {
+		if (parent_rate / divider < pll_clock) {
+			divider--;
 			break;
+		}
 	}
 
 	/* Now that we've picked a PLL divider, calculate back to its
@@ -862,6 +873,12 @@ static bool vc4_dsi_encoder_mode_fixup(struct drm_encoder *encoder,
 	pixel_clock_hz = pll_clock / dsi->divider;
 
 	adjusted_mode->clock = pixel_clock_hz / 1000;
+#ifdef VERBOSE
+	printk(KERN_ERR "VC4_DSI: %s: AFTER pixel_clock_hz %lu, divider %u, pll_clock %lu\n",
+	       __func__, pixel_clock_hz, dsi->divider, pll_clock);
+	printk(KERN_ERR "VC4_DSI: %s: adjusted_mode->clock %lu\n",
+	       __func__, adjusted_mode->clock);
+#endif
 
 	/* Given the new pixel clock, adjust HFP to keep vrefresh the same. */
 	adjusted_mode->htotal = adjusted_mode->clock * mode->htotal /
@@ -887,7 +904,12 @@ static void vc4_dsi_encoder_enable(struct drm_encoder *encoder)
 	unsigned long pixel_clock_hz = mode->clock * 1000;
 	unsigned long dsip_clock;
 	unsigned long phy_clock;
+	u32 disp0_ctrl;
 	int ret;
+
+#ifdef VERBOSE
+	printk(KERN_ERR "VC4_DSI: %s: init\n", __func__);
+#endif
 
 	ret = pm_runtime_get_sync(dev);
 	if (ret) {
@@ -905,12 +927,19 @@ static void vc4_dsi_encoder_enable(struct drm_encoder *encoder)
 	 * PLLD_DSI1 is an integer divider and its rate selection will
 	 * never round up.
 	 */
+#ifdef VERBOSE
+	printk(KERN_ERR "VC4_DSI: %s: pixel_clock_hz %lu, divider %u\n",
+	       __func__, pixel_clock_hz, dsi->divider);
+#endif
 	phy_clock = (pixel_clock_hz + 1000) * dsi->divider;
 	ret = clk_set_rate(dsi->pll_phy_clock, phy_clock);
 	if (ret) {
 		dev_err(&dsi->pdev->dev,
 			"Failed to set phy clock to %ld: %d\n", phy_clock, ret);
 	}
+#ifdef VERBOSE
+	printk(KERN_ERR "VC4_DSI: %s: pll_phy_clock is now %lu\n", __func__, phy_clock);
+#endif
 
 	/* Reset the DSI and all its fifos. */
 	DSI_PORT_WRITE(CTRL,
@@ -971,6 +1000,9 @@ static void vc4_dsi_encoder_enable(struct drm_encoder *encoder)
 	}
 
 	ret = clk_prepare_enable(dsi->escape_clock);
+#ifdef VERBOSE
+	printk(KERN_ERR "VC4_DSI: %s: escape_clock %lu\n", __func__, clk_get_rate(dsi->escape_clock));
+#endif
 	if (ret) {
 		DRM_ERROR("Failed to turn on DSI escape clock: %d\n", ret);
 		return;
@@ -983,6 +1015,9 @@ static void vc4_dsi_encoder_enable(struct drm_encoder *encoder)
 	}
 
 	hs_clock = clk_get_rate(dsi->pll_phy_clock);
+#ifdef VERBOSE
+	printk(KERN_ERR "VC4_DSI: %s: hs_clock %ld\n", __func__, hs_clock);
+#endif
 
 	/* Yes, we set the DSI0P/DSI1P pixel clock to the byte rate,
 	 * not the pixel clock rate.  DSIxP take from the APHY's byte,
@@ -998,6 +1033,9 @@ static void vc4_dsi_encoder_enable(struct drm_encoder *encoder)
 			dsip_clock, ret);
 	}
 
+#ifdef VERBOSE
+	printk(KERN_ERR "VC4_DSI: %s: pixel_clock %lu\n", __func__, clk_get_rate(dsi->pixel_clock));
+#endif
 	ret = clk_prepare_enable(dsi->pixel_clock);
 	if (ret) {
 		DRM_ERROR("Failed to turn on DSI pixel clock: %d\n", ret);
@@ -1117,31 +1155,32 @@ static void vc4_dsi_encoder_enable(struct drm_encoder *encoder)
 			iter->funcs->pre_enable(iter);
 	}
 
-	if (dsi->mode_flags & MIPI_DSI_MODE_VIDEO) {
-		DSI_PORT_WRITE(DISP0_CTRL,
-			       VC4_SET_FIELD(dsi->divider,
-					     DSI_DISP0_PIX_CLK_DIV) |
-			       VC4_SET_FIELD(dsi->format, DSI_DISP0_PFORMAT) |
-			       VC4_SET_FIELD(DSI_DISP0_LP_STOP_PERFRAME,
-					     DSI_DISP0_LP_STOP_CTRL) |
-			       DSI_DISP0_ST_END |
-			       DSI_DISP0_ENABLE);
-	} else {
-		DSI_PORT_WRITE(DISP0_CTRL,
-			       DSI_DISP0_COMMAND_MODE |
-			       DSI_DISP0_ENABLE);
-	}
+	if (dsi->mode_flags & MIPI_DSI_MODE_VIDEO)
+		disp0_ctrl = VC4_SET_FIELD(dsi->divider,
+					   DSI_DISP0_PIX_CLK_DIV) |
+			     VC4_SET_FIELD(dsi->format, DSI_DISP0_PFORMAT) |
+			     VC4_SET_FIELD(DSI_DISP0_LP_STOP_PERFRAME,
+					   DSI_DISP0_LP_STOP_CTRL) |
+			     DSI_DISP0_ST_END;
+	else
+		disp0_ctrl = DSI_DISP0_COMMAND_MODE;
+	DSI_PORT_WRITE(DISP0_CTRL, disp0_ctrl);
 
 	list_for_each_entry(iter, &dsi->bridge_chain, chain_node) {
 		if (iter->funcs->enable)
 			iter->funcs->enable(iter);
 	}
+	DSI_PORT_WRITE(DISP0_CTRL, disp0_ctrl | DSI_DISP0_ENABLE);
 
 	if (debug_dump_regs) {
 		struct drm_printer p = drm_info_printer(&dsi->pdev->dev);
 		dev_info(&dsi->pdev->dev, "DSI regs after:\n");
 		drm_print_regset32(&p, &dsi->regset);
 	}
+
+#ifdef VERBOSE
+	printk(KERN_ERR "VC4_DSI: %s: exit\n", __func__);
+#endif
 }
 
 static ssize_t vc4_dsi_host_transfer(struct mipi_dsi_host *host,
@@ -1315,12 +1354,10 @@ reset_fifo_and_return:
 	return ret;
 }
 
-static const struct component_ops vc4_dsi_ops;
 static int vc4_dsi_host_attach(struct mipi_dsi_host *host,
 			       struct mipi_dsi_device *device)
 {
 	struct vc4_dsi *dsi = host_to_dsi(host);
-	int ret;
 
 	dsi->lanes = device->lanes;
 	dsi->channel = device->channel;
@@ -1353,12 +1390,6 @@ static int vc4_dsi_host_attach(struct mipi_dsi_host *host,
 		dev_err(&dsi->pdev->dev,
 			"Only VIDEO mode panels supported currently.\n");
 		return 0;
-	}
-
-	ret = component_add(&dsi->pdev->dev, &vc4_dsi_ops);
-	if (ret) {
-		mipi_dsi_host_unregister(&dsi->dsi_host);
-		return ret;
 	}
 
 	return 0;
@@ -1562,6 +1593,10 @@ static int vc4_dsi_bind(struct device *dev, struct device *master, void *data)
 	dma_cap_mask_t dma_mask;
 	int ret;
 
+#ifdef VERBOSE
+	printk(KERN_ERR "VC4_DSI: %s: init\n", __func__);
+#endif
+
 	match = of_match_device(vc4_dsi_dt_match, dev);
 	if (!match)
 		return -ENODEV;
@@ -1614,7 +1649,7 @@ static int vc4_dsi_bind(struct device *dev, struct device *master, void *data)
 			if (ret != -EPROBE_DEFER)
 				DRM_ERROR("Failed to get DMA channel: %d\n",
 					  ret);
-			goto err_free_dma_mem;
+			return ret;
 		}
 
 		/* Get the physical address of the device's registers.  The
@@ -1643,7 +1678,7 @@ static int vc4_dsi_bind(struct device *dev, struct device *master, void *data)
 	if (ret) {
 		if (ret != -EPROBE_DEFER)
 			dev_err(dev, "Failed to get interrupt: %d\n", ret);
-		goto err_free_dma;
+		return ret;
 	}
 
 	dsi->escape_clock = devm_clk_get(dev, "escape");
@@ -1651,7 +1686,7 @@ static int vc4_dsi_bind(struct device *dev, struct device *master, void *data)
 		ret = PTR_ERR(dsi->escape_clock);
 		if (ret != -EPROBE_DEFER)
 			dev_err(dev, "Failed to get escape clock: %d\n", ret);
-		goto err_free_dma;
+		return ret;
 	}
 
 	dsi->pll_phy_clock = devm_clk_get(dev, "phy");
@@ -1659,7 +1694,7 @@ static int vc4_dsi_bind(struct device *dev, struct device *master, void *data)
 		ret = PTR_ERR(dsi->pll_phy_clock);
 		if (ret != -EPROBE_DEFER)
 			dev_err(dev, "Failed to get phy clock: %d\n", ret);
-		goto err_free_dma;
+		return ret;
 	}
 
 	dsi->pixel_clock = devm_clk_get(dev, "pixel");
@@ -1667,7 +1702,7 @@ static int vc4_dsi_bind(struct device *dev, struct device *master, void *data)
 		ret = PTR_ERR(dsi->pixel_clock);
 		if (ret != -EPROBE_DEFER)
 			dev_err(dev, "Failed to get pixel clock: %d\n", ret);
-		goto err_free_dma;
+		return ret;
 	}
 
 	ret = drm_of_find_panel_or_bridge(dev->of_node, 0, 0,
@@ -1682,28 +1717,26 @@ static int vc4_dsi_bind(struct device *dev, struct device *master, void *data)
 		if (ret == -ENODEV)
 			return 0;
 
-		goto err_free_dma;
+		return ret;
 	}
 
 	if (panel) {
 		dsi->bridge = devm_drm_panel_bridge_add_typed(dev, panel,
 							      DRM_MODE_CONNECTOR_DSI);
-		if (IS_ERR(dsi->bridge)) {
-			ret = PTR_ERR(dsi->bridge);
-			goto err_free_dma;
-		}
+		if (IS_ERR(dsi->bridge))
+			return PTR_ERR(dsi->bridge);
 	}
 
 	/* The esc clock rate is supposed to always be 100Mhz. */
 	ret = clk_set_rate(dsi->escape_clock, 100 * 1000000);
 	if (ret) {
 		dev_err(dev, "Failed to set esc clock: %d\n", ret);
-		goto err_free_dma;
+		return ret;
 	}
 
 	ret = vc4_dsi_init_phy_clocks(dsi);
 	if (ret)
-		goto err_free_dma;
+		return ret;
 
 	drm_simple_encoder_init(drm, dsi->encoder, DRM_MODE_ENCODER_DSI);
 	drm_encoder_helper_add(dsi->encoder, &vc4_dsi_encoder_helper_funcs);
@@ -1711,7 +1744,7 @@ static int vc4_dsi_bind(struct device *dev, struct device *master, void *data)
 	ret = drm_bridge_attach(dsi->encoder, dsi->bridge, NULL, 0);
 	if (ret) {
 		dev_err(dev, "bridge attach failed: %d\n", ret);
-		goto err_free_dma;
+		return ret;
 	}
 	/* Disable the atomic helper calls into the bridge.  We
 	 * manually call the bridge pre_enable / enable / etc. calls
@@ -1724,20 +1757,11 @@ static int vc4_dsi_bind(struct device *dev, struct device *master, void *data)
 
 	pm_runtime_enable(dev);
 
+#ifdef VERBOSE
+	printk(KERN_ERR "VC4_DSI: %s: exit\n", __func__);
+#endif
+
 	return 0;
-
-err_free_dma:
-	if (dsi->reg_dma_chan) {
-		dma_release_channel(dsi->reg_dma_chan);
-		dsi->reg_dma_chan = NULL;
-	}
-err_free_dma_mem:
-	if (dsi->reg_dma_mem) {
-		dma_free_coherent(dev, 4, dsi->reg_dma_mem, dsi->reg_dma_paddr);
-		dsi->reg_dma_mem = NULL;
-	}
-
-	return ret;
 }
 
 static void vc4_dsi_unbind(struct device *dev, struct device *master,
@@ -1754,16 +1778,6 @@ static void vc4_dsi_unbind(struct device *dev, struct device *master,
 	 */
 	list_splice_init(&dsi->bridge_chain, &dsi->encoder->bridge_chain);
 	drm_encoder_cleanup(dsi->encoder);
-
-	if (dsi->reg_dma_chan) {
-		dma_release_channel(dsi->reg_dma_chan);
-		dsi->reg_dma_chan = NULL;
-	}
-
-	if (dsi->reg_dma_mem) {
-		dma_free_coherent(dev, 4, dsi->reg_dma_mem, dsi->reg_dma_paddr);
-		dsi->reg_dma_mem = NULL;
-	}
 }
 
 static const struct component_ops vc4_dsi_ops = {
@@ -1775,6 +1789,7 @@ static int vc4_dsi_dev_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct vc4_dsi *dsi;
+	int ret;
 
 	dsi = devm_kzalloc(dev, sizeof(*dsi), GFP_KERNEL);
 	if (!dsi)
@@ -1782,9 +1797,25 @@ static int vc4_dsi_dev_probe(struct platform_device *pdev)
 	dev_set_drvdata(dev, dsi);
 
 	dsi->pdev = pdev;
+
+	/* Note, the initialization sequence for DSI and panels is
+	 * tricky.  The component bind above won't get past its
+	 * -EPROBE_DEFER until the panel/bridge probes.  The
+	 * panel/bridge will return -EPROBE_DEFER until it has a
+	 * mipi_dsi_host to register its device to.  So, we register
+	 * the host during pdev probe time, so vc4 as a whole can then
+	 * -EPROBE_DEFER its component bind process until the panel
+	 * successfully attaches.
+	 */
 	dsi->dsi_host.ops = &vc4_dsi_host_ops;
 	dsi->dsi_host.dev = dev;
 	mipi_dsi_host_register(&dsi->dsi_host);
+
+	ret = component_add(&pdev->dev, &vc4_dsi_ops);
+	if (ret) {
+		mipi_dsi_host_unregister(&dsi->dsi_host);
+		return ret;
+	}
 
 	return 0;
 }
@@ -1808,3 +1839,5 @@ struct platform_driver vc4_dsi_driver = {
 		.of_match_table = vc4_dsi_dt_match,
 	},
 };
+
+#undef DEBUG
