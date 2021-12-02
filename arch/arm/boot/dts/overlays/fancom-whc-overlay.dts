@@ -124,7 +124,6 @@
 					default-state = "off";
 				};
 
-
 				led_green {
 					gpios = <&gpio 22 GPIO_ACTIVE_LOW>; /* pin 46 */
 					color = <LED_COLOR_ID_GREEN>;
@@ -144,6 +143,15 @@
 		target = <&spi0>;
 		__overlay__ {
 			status = "disabled";
+		};
+	};
+
+	/* Fix because overlay is not picked up.. */
+	fragment@11 {
+		target = <&usb>;
+		__overlay__ {
+			compatible = "brcm,bcm2708-usb";
+			status = "okay";
 		};
 	};
 };
