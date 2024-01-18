@@ -118,20 +118,20 @@
 		__overlay__ {
 			leds_rgb {
 				compatible = "gpio-leds"; /* See leds-gpio.yaml */
-				led_red {
+				led_aap {
 					gpios = <&gpio 24 GPIO_ACTIVE_LOW>; /* pin 45 */
 					color = <LED_COLOR_ID_RED>;
 					default-state = "off";
 				};
 
 
-				led_green {
+				led_noot {
 					gpios = <&gpio 22 GPIO_ACTIVE_LOW>; /* pin 46 */
 					color = <LED_COLOR_ID_GREEN>;
 					default-state = "off";
 				};
 
-				led_blue {
+				led_mies {
 					gpios = <&gpio 23 GPIO_ACTIVE_LOW>; /* pin 47 */
 					color = <LED_COLOR_ID_BLUE>;
 					default-state = "off";
