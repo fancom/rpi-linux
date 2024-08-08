@@ -591,10 +591,6 @@ static void sn65dsi83_enable(struct drm_bridge *bridge)
 	regmap_write(ctx->regmap, REG_VID_CHA_TEST_PATTERN, 0x10);
 #endif
 
-#ifdef VERBOSE
-	dumpRegs(bridge);
-#endif
-
 #ifdef HARDCODED_REGS
 #ifdef VERBOSE
 	printk(KERN_ERR "DSI_BRIDGE: %s: sn65dsi65_reg_defaults\n", __func__);
@@ -628,6 +624,10 @@ static void sn65dsi83_enable(struct drm_bridge *bridge)
 	/* Clear all errors that got asserted during initialization. */
 	regmap_read(ctx->regmap, REG_IRQ_STAT, &pval);
 	regmap_write(ctx->regmap, REG_IRQ_STAT, pval);
+
+#ifdef VERBOSE
+	dumpRegs(bridge);
+#endif
 }
 
 static void sn65dsi83_disable(struct drm_bridge *bridge)
@@ -848,6 +848,7 @@ static int sn65dsi83_probe(struct i2c_client *client,
 	drm_bridge_add(&ctx->bridge);
 
 #ifdef VERBOSE
+	dumpRegs(&ctx->bridge);
 	printk(KERN_ERR "DSI_BRIDGE: %s: exit\n", __func__);
 #endif
 
