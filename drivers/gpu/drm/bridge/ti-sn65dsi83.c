@@ -441,7 +441,7 @@ static u8 sn65dsi83_get_dsi_div(struct sn65dsi83 *ctx)
 
 #ifdef VERBOSE
 	printk(KERN_ERR "DSI_BRIDGE: %s: set dsiDiv to %d based on %ld, %d, %d\n",
-	       __func__, dsi_div -1, ctx->dsi->format, ctx->dsi_lanes, ctx->lvds_dual_link);
+	       __func__, dsi_div, ctx->dsi->format, ctx->dsi_lanes, ctx->lvds_dual_link);
 #endif
 	return dsi_div - 1;
 }
