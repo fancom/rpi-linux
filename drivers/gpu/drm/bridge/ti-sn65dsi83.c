@@ -468,6 +468,9 @@ static void sn65dsi83_enable(struct drm_bridge *bridge)
 	unsigned int pval;
 	u16 val;
 	int ret;
+#ifdef HARDCODED_REGS
+	int i;
+#endif
 
 	/* Reference clock derived from DSI link clock. */
 	regmap_write(ctx->regmap, REG_RC_LVDS_PLL,
