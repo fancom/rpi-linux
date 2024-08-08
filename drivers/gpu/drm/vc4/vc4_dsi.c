@@ -1,4 +1,4 @@
-//#define VERBOSE
+#define VERBOSE
 
 // SPDX-License-Identifier: GPL-2.0-only
 /*
