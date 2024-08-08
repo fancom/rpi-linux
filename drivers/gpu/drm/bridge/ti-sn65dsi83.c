@@ -1,6 +1,6 @@
 #define MODE_HACK
 #define VERBOSE
-//#define HARDCODED_REGS
+#define HARDCODED_REGS
 #define SN65DSI83_TEST_PATTERN
 
 // SPDX-License-Identifier: GPL-2.0
@@ -248,6 +248,8 @@ static const struct regmap_config sn65dsi83_regmap_config = {
 	.max_register = REG_IRQ_STAT,
 };
 
+
+#if defined HARDCODED_REGS && !defined SN65DSI83_TEST_PATTERN
 static const struct reg_default sn65dsi83_reg_defaults[] = {
 	/* Reset */
 	{0x09, 0x00},
@@ -265,7 +267,7 @@ static const struct reg_default sn65dsi83_reg_defaults[] = {
 	{0x1B, 0x00},//ok
 
 	/* Channel A+B */
-	{0x20, 0x80},//ok
+	{0x20, 0xC0},//ok
 	{0x21, 0x07},//ok
 	{0x24, 0x38},//ok
 	{0x25, 0x04},//ok
@@ -284,13 +286,54 @@ static const struct reg_default sn65dsi83_reg_defaults[] = {
 	{0xE0, 0x00},
 	{0xE1, 0x00},
 	{0xE5, 0x00},
-#ifdef SN65DSI83_TEST_PATTERN
-	/* Test */
-	{0x3C, 0x10},
-#else
+
+	/* Test pattern */
 	{0x3C, 0x00},
-#endif
 };
+#endif
+
+#if defined HARDCODED_REGS && defined SN65DSI83_TEST_PATTERN
+static const struct reg_default sn65dsi83_reg_defaults[] = {
+	/* Reset */
+	{0x09, 0x00},
+
+	/* Core */
+	{0x0A, 0x05},
+	{0x0B, 0x38},
+	{0x0D, 0x00},
+	{0x10, 0x28},
+	{0x11, 0x00},
+	{0x12, 0x64},
+	{0x18, 0x6C},
+	{0x19, 0x0F},
+	{0x1A, 0x20},
+	{0x1B, 0x00},
+
+	/* Channel A+B */
+	{0x20, 0xC0},
+	{0x21, 0x03},
+	{0x24, 0x38},
+	{0x25, 0x04},
+	{0x28, 0xE1},
+	{0x29, 0x03},
+	{0x2C, 0x23},
+	{0x2D, 0x00},
+	{0x30, 0x0A},
+	{0x31, 0x00},
+	{0x34, 0x23},
+	{0x36, 0x0A},
+	{0x38, 0x23},
+	{0x3A, 0x0A},
+
+	/* interrupts */
+	{0xE0, 0x00},
+	{0xE1, 0x00},
+	{0xE5, 0x00},
+
+	/* Test pattern */
+	{0x3C, 0x10},
+};
+#endif
 
 /* fwd declaration */
 static void sn65dsi83_mode_set(struct drm_bridge *bridge,
